@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# Coverage data
+.coverage
+coverage.json
+coverage.xml
+coverage_html/
+coverage_debug/
+
+# JUnit XML
+*.xml
+
+# Generated test cases
+generated_tests/
+
+# Editor settings
+.vscode/
+.idea/
+
+# MacOS metadata
+.DS_Store
+
+# Ignore requests library. Clone inside project root and run pip install -e requests/ to use it 
+requests/
+
+
