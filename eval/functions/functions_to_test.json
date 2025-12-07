@@ -1,0 +1,243 @@
+[
+  {
+    "name": "get_auth_from_url",
+    "module": "requests.utils",
+    "file": "requests/src/requests/utils.py",
+    "qualname": "requests.utils.get_auth_from_url",
+    "function_def": [
+      "def get_auth_from_url(url):",
+      "    \"\"\"Given a url with authentication components, extract them into a tuple of",
+      "    username,password.",
+      "",
+      "    :rtype: (str,str)",
+      "    \"\"\"",
+      "    parsed = urlparse(url)",
+      "",
+      "    try:",
+      "        auth = (unquote(parsed.username), unquote(parsed.password))",
+      "    except (AttributeError, TypeError):",
+      "        auth = (\"\", \"\")",
+      "",
+      "    return auth"
+    ],
+    "test_cases": [
+      {
+        "id": 1,
+        "test_name": "test_get_auth_from_url",
+        "test_file": "requests/tests/test_utils.py",
+        "test_code": [
+          "USER = PASSWORD = \"%!*'();:@&=+$,/?#[] \"",
+          "ENCODED_USER = compat.quote(USER, \"\")",
+          "ENCODED_PASSWORD = compat.quote(PASSWORD, \"\")",
+          "",
+          "@pytest.mark.parametrize(",
+          "    \"url, auth\",",
+          "    (",
+          "        (",
+          "            f\"http://{ENCODED_USER}:{ENCODED_PASSWORD}@request.com/url.html#test\",",
+          "            (USER, PASSWORD),",
+          "        ),",
+          "        (\"http://user:pass@complex.url.com/path?query=yes\", (\"user\", \"pass\")),",
+          "        (\"http://user:pass%20pass@complex.url.com/path?query=yes\", (\"user\", \"pass pass\")),",
+          "        (\"http://user:pass pass@complex.url.com/path?query=yes\", (\"user\", \"pass pass\")),",
+          "        (\"http://user%25user:pass@complex.url.com/path?query=yes\", (\"user%user\", \"pass\")),",
+          "        (\"http://user:pass%23pass@complex.url.com/path?query=yes\", (\"user\", \"pass#pass\")),",
+          "        (\"http://complex.url.com/path?query=yes\", (\"\", \"\")),",
+          "    ),",
+          ")",
+          "def test_get_auth_from_url(url, auth):",
+          "    assert get_auth_from_url(url) == auth"
+        ]
+      }
+    ],
+    "fixtures": [],
+    "description": "Extract username and password from a URL, decoding percent-encoded components. Returns ('', '') when no credentials present or when parsed attributes are missing.",
+    "security_focus": [
+      "credential_handling",
+      "percent_encoding_handling",
+      "sensitive_output_disclosure"
+    ],
+    "setup_notes": {
+      "note": "Pure unit test; no network or heavy fixtures required. The test uses compat.quote to prepare encoded username/password examples. When sending to an LLM, include the parametrization examples so the model sees varied encoded and edge-case inputs."
+    }
+  },
+  {
+    "name": "prepend_scheme_if_needed",
+    "module": "requests.utils",
+    "file": "requests/src/requests/utils.py",
+    "qualname": "requests.utils.prepend_scheme_if_needed",
+    "function_def": [
+      "def prepend_scheme_if_needed(url, new_scheme):",
+      "    \"\"\"Given a URL that may or may not have a scheme, prepend the given scheme.",
+      "    Does not replace a present scheme with the one provided as an argument.",
+      "",
+      "    :rtype: str",
+      "    \"\"\"",
+      "    parsed = parse_url(url)",
+      "    scheme, auth, host, port, path, query, fragment = parsed",
+      "",
+      "    # A defect in urlparse determines that there isn't a netloc present in some",
+      "    # urls. We previously assumed parsing was overly cautious, and swapped the",
+      "    # netloc and path. Due to a lack of tests on the original defect, this is",
+      "    # maintained with parse_url for backwards compatibility.",
+      "    netloc = parsed.netloc",
+      "    if not netloc:",
+      "        netloc, path = path, netloc",
+      "",
+      "    if auth:",
+      "        # parse_url doesn't provide the netloc with auth",
+      "        # so we'll add it ourselves.",
+      "        netloc = \"@\".join([auth, netloc])",
+      "    if scheme is None:",
+      "        scheme = new_scheme",
+      "    if path is None:",
+      "        path = \"\"",
+      "",
+      "    return urlunparse((scheme, netloc, path, \"\", query, fragment))"
+    ],
+    "test_cases": [
+      {
+        "id": 1,
+        "test_name": "test_prepend_scheme_if_needed",
+        "test_file": "requests/tests/test_utils.py",
+        "test_code": [
+          "@pytest.mark.parametrize(",
+          "    \"value, expected\",",
+          "    (",
+          "        (\"example.com/path\", \"http://example.com/path\"),",
+          "        (\"//example.com/path\", \"http://example.com/path\"),",
+          "        (\"example.com:80\", \"http://example.com:80\"),",
+          "        (\"http://user:pass@example.com/path?query\", \"http://user:pass@example.com/path?query\"),",
+          "        (\"http://user@example.com/path?query\", \"http://user@example.com/path?query\"),",
+          "    ),",
+          ")",
+          "def test_prepend_scheme_if_needed(value, expected):",
+          "    assert prepend_scheme_if_needed(value, \"http\") == expected"
+        ]
+      }
+    ],
+    "fixtures": [],
+    "description": "Ensure a scheme (e.g., 'http') is prepended when missing; preserve existing scheme, auth, host, port, path and query. Handles protocol-relative URLs and cases where parse_url may swap netloc/path.",
+    "security_focus": [
+      "url_canonicalization",
+      "credential_handling (preserve/remove auth as appropriate)",
+      "sensitive_output_disclosure"
+    ],
+    "setup_notes": {
+      "note": "Unit tests in test_utils.py are self-contained; include parametrized examples so the LLM sees protocol-relative, existing-scheme, and auth-containing cases. No network fixtures required."
+    }
+  },
+  {
+  "name": "_basic_auth_str",
+  "module": "requests.auth",
+  "file": "requests/src/requests/auth.py",
+  "qualname": "requests.auth._basic_auth_str",
+  "function_def": [
+    "def _basic_auth_str(username, password):",
+    "    \"\"\"Returns a Basic Auth string.\"\"\"",
+    "",
+    "    # \"I want us to put a big-ol' comment on top of it that",
+    "    # says that this behaviour is dumb but we need to preserve",
+    "    # it because people are relying on it.\"",
+    "    #    - Lukasa",
+    "    #",
+    "    # These are here solely to maintain backwards compatibility",
+    "    # for things like ints. This will be removed in 3.0.0.",
+    "    if not isinstance(username, basestring):",
+    "        warnings.warn(",
+    "            \"Non-string usernames will no longer be supported in Requests \"",
+    "            \"3.0.0. Please convert the object you've passed in ({!r}) to \"",
+    "            \"a string or bytes object in the near future to avoid \"",
+    "            \"problems.\".format(username),",
+    "            category=DeprecationWarning,",
+    "        )",
+    "        username = str(username)",
+    "",
+    "    if not isinstance(password, basestring):",
+    "        warnings.warn(",
+    "            \"Non-string passwords will no longer be supported in Requests \"",
+    "            \"3.0.0. Please convert the object you've passed in ({!r}) to \"",
+    "            \"a string or bytes object in the near future to avoid \"",
+    "            \"problems.\".format(type(password)),",
+    "            category=DeprecationWarning,",
+    "        )",
+    "        password = str(password)",
+    "    # -- End Removal --",
+    "",
+    "    if isinstance(username, str):",
+    "        username = username.encode(\"latin1\")",
+    "",
+    "    if isinstance(password, str):",
+    "        password = password.encode(\"latin1\")",
+    "",
+    "    authstr = \"Basic \" + to_native_string(",
+    "        b64encode(b\":\".join((username, password))).strip()",
+    "    )",
+    "",
+    "    return authstr"
+  ],
+  "test_cases": [
+    {
+      "id": 1,
+      "test_name": "test_set_basicauth",
+      "test_file": "requests/tests/test_requests.py",
+      "test_code": [
+        "@pytest.mark.parametrize(",
+        "    \"username, password\",",
+        "    (",
+        "        (\"user\", \"pass\"),",
+        "        (\"имя\".encode(), \"пароль\".encode()),",
+        "        (42, 42),",
+        "        (None, None),",
+        "    ),",
+        ")",
+        "def test_set_basicauth(self, httpbin, username, password):",
+        "    auth = (username, password)",
+        "    url = httpbin(\"get\")",
+        "",
+        "    r = requests.Request(\"GET\", url, auth=auth)",
+        "    p = r.prepare()",
+        "",
+        "    assert p.headers[\"Authorization\"] == _basic_auth_str(username, password)"
+      ]
+    },
+    {
+      "id": 2,
+      "test_name": "test_basic_auth_str_is_always_native",
+      "test_file": "requests/tests/test_requests.py",
+      "test_code": [
+        "@pytest.mark.parametrize(",
+        "    \"username, password, auth_str\",",
+        "    (",
+        "        (\"test\", \"test\", \"Basic dGVzdDp0ZXN0\"),",
+        "        (",
+        "            \"имя\".encode(),",
+        "            \"пароль\".encode(),",
+        "            \"Basic 0LjQvNGPOtC/0LDRgNC+0LvRjA==\",",
+        "        ),",
+        "    ),",
+        ")",
+        "def test_basic_auth_str_is_always_native(self, username, password, auth_str):",
+        "    s = _basic_auth_str(username, password)",
+        "    assert isinstance(s, builtin_str)",
+        "    assert s == auth_str"
+      ]
+    }
+  ],
+  "fixtures": [
+    "httpbin (used by test_set_basicauth for simple HTTP endpoints)",
+    "builtin_str (type alias used in tests for native/string assertions)"
+  ],
+  "description": "Constructs a Basic Authorization header value from username and password. Handles bytes, str, and non-string inputs (with deprecation warnings), encodes str to latin-1 bytes, base64-encodes the username:password pair and returns a native string prefixed with 'Basic '.",
+  "security_focus": [
+    "credential_handling",
+    "sensitive_output_disclosure",
+    "output_sanitization",
+    "header_injection (CRLF)"
+  ],
+  "setup_notes": {
+    "note": "The example tests reference fixtures (httpbin, builtin_str) and may rely on module-level imports/fixtures in the test suite. When sending this entry to an LLM, include a brief note asking the model to either mock those fixtures or produce self-contained tests that do not require the full test harness.",
+    "recommendation": "Prefer providing minimal stubs for httpbin or instruct the LLM to use tmp_path/monkeypatch to avoid network and heavy fixtures."
+  }
+  } 
+]

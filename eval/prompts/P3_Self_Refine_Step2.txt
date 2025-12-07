@@ -1,0 +1,7 @@
+You generated the test cases shown below.
+Provide a critique identifying ways the test cases could be improved.
+
+{{GENERATED_TEST_CASES_FROM_STEP_1}}
+
+Do NOT rewrite the tests here.
+Output only your critique.

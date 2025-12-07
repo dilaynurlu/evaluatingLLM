@@ -1,0 +1,22 @@
+You wrote the initial test cases and the critique below. 
+Now refine the initial test cases based on your critique.
+
+{{GENERATED_TEST_CASES_FROM_STEP_1}}
+
+{{GENERATED_CRITIQUE_FROM_STEP_2}}
+
+Requirements:
+- Improve the test cases according to your critique.
+- Output only the improved test-case files.
+- Produce exactly N refined test cases.
+- Test cases must be fully self-contained and executable as its own file.
+- You are not allowed to paste the target function into the test case for self-containtment purposes. 
+- Do NOT output your reasoning or critique.
+- Do not include Markdown code fences (```), output raw Python files only.
+- Each test file must be separated using the delimiter:
+  ===TESTCASE_START===
+  (test file content)
+  ===TESTCASE_END===
+  
+
+Now generate the refined test cases.

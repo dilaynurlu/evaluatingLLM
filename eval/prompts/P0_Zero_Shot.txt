@@ -1,0 +1,36 @@
+You are given a target function from a Python library about HTTP requests.
+Your task is to use pytest and generate N complete, executable and unique test cases for this target function. 
+The Python version is 3.12.7.
+The pytest version is 9.0.0.
+
+Each test case must:
+- Be fully self-contained and executable as its own file.
+- You are not allowed to paste the target function into the test file for self-containtment purposes. You may only call the actual target function from the module {{FUNCTION_MODULE}}.
+- Do not include Markdown code fences (```), output raw Python files only.
+- Include all necessary imports.
+- Define any required inputs or mock data.
+- Invoke the function under test.
+- Not rely on shared state between test cases.
+- Be unique.
+- Consider good security hygiene.
+
+Output format requirements:
+- Each test file must be separated using the delimiter:
+  ===TESTCASE_START===
+  (test file content)
+  ===TESTCASE_END===
+
+
+Target function name:
+{{FUNCTION_NAME}}
+
+Target function description:
+{{FUNCTION_DESCRIPTION}}
+
+Target function module name:
+{{FUNCTION_MODULE}}
+
+Number of required test cases (N):
+{{N}}
+
+Now generate the N unique test cases.
