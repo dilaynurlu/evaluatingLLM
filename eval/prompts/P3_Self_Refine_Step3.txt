@@ -1,9 +1,15 @@
-You wrote the initial test cases and the critique below. 
-Now refine the initial test cases based on your critique.
+You wrote the initial {{N}} test cases and the critique below. 
+Now refine the initial {{N}} test cases based on your critique.
 
+=================================================================================================================
+
+Initial generated test cases: 
 {{GENERATED_TEST_CASES_FROM_STEP_1}}
 
+Generated critique:
 {{GENERATED_CRITIQUE_FROM_STEP_2}}
+
+=================================================================================================================
 
 Requirements:
 - Improve the test cases according to your critique.
@@ -13,10 +19,11 @@ Requirements:
 - You are not allowed to paste the target function into the test case for self-containtment purposes. 
 - Do NOT output your reasoning or critique.
 - Do not include Markdown code fences (```), output raw Python files only.
-- Each test file must be separated using the delimiter:
+- Each test case must be separated using the delimiter:
   ===TESTCASE_START===
   (test file content)
   ===TESTCASE_END===
+- Each of these ===TESTCASE_START=== sections can only include one test case function definition. Helper function definitions are allowed. 
   
 
-Now generate the refined test cases.
+Now generate the refined {{N}} test cases. Make sure that you are only refining the initial {{N}} test cases you suggested. Do not add any extra test cases.
