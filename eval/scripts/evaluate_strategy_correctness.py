@@ -22,7 +22,9 @@ import csv
 import argparse
 
 
-#script evaluates syntactic, execution and assertion correctness of generated tests
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TESTS_BASE = PROJECT_ROOT / "eval" / "tests" / "generated_tests"
+CSV_BASE = PROJECT_ROOT / "eval" / "results" / "correctness"
 
 
 def syntactic_ok(path: Path) -> bool:
@@ -355,32 +357,67 @@ def main():
     Optionally writes results to a CSV file including all scores and the error message.
     In one line of the CSV, we have results for one test case. 
     (Each test case is saved in a separate .py file for clear observation.)
-
-    The script can be called for a single test file or an entire folder.
+    The script can be called for a single test file or an entire directory.
 
     Criteria:
         - syntactic_ok: 1 if the file compiles, 0 otherwise. If 0, we skip execution and assertion checks.
         - exectution_ok: 1 if the test runs without execution errors, 0 otherwise.
         - assertion_ok: 1 if there is at least one assert and no execution failures and no assertion failures, 0 otherwise.
 
-    Call from root directorty like so:
-      python3 experiments/evaluate_correctness.py experiments/generated_tests --csv results_correctness.csv
+    
+    --strategy  : required, one of P0,P1,P2,P3 (folder under eval/tests/generated_tests)
+    --tests     : optional, function name for the tests (function/class folder inside the strategy dir).
+                  If omitted the whole strategy folder is evaluated.
+    --csv       : optional flag. When provided the script will create CSV at:
+                  eval/results/correctness/<strategy>/<tests_or_strategy>/results_<tests_or_strategy>.csv
+
+    Examples:
+      # Entire strategy
+      python eval/scripts/evaluate_correctness.py --strategy P0 --csv
+
+      # Single subject under a strategy
+      python eval/scripts/evaluate_correctness.py --strategy P0 --tests get_auth_from_url --csv
     """
+
     parser = argparse.ArgumentParser(
         description="Evaluate syntactic, execution, and assertion correctness of test files."
     )
     parser.add_argument(
-        "path",
-        help="Test file or directory (e.g. experiments/generated_tests)"
+        "--strategy",
+        required=True,
+        help="Prompt generation strategy folder under eval/tests/generated_tests (e.g. P0,P1,P2,P3,R).",
+    )
+    parser.add_argument(
+        "--tests",
+        help="Function name for the tests (function/class folder inside the strategy dir). If omitted the whole strategy dir is evaluated.",
+        default=None,
     )
     parser.add_argument(
         "--csv",
-        help="Optional path to write CSV results (e.g. results_correctness.csv). Creates or overwrites existing file.",
-        default=None,
+        action="store_true",
+        help="If set, create CSV at eval/results/correctness/<strategy>/<tests_or_strategy>/results_<tests_or_strategy>.csv",
     )
+
     args = parser.parse_args()
 
-    target = Path(args.path).resolve()
+    strategy = args.strategy
+    tests = args.tests  # may be None
+
+    # Build target path automatically (handle tests==None)
+    if tests:
+        target = (TESTS_BASE / strategy / tests).resolve()
+        csv_name = f"correctness_results_{tests}.csv"
+    else:
+        target = (TESTS_BASE / strategy).resolve()
+        csv_name = f"correctness_results_{strategy}.csv"
+
+    csv_subdir = CSV_BASE / strategy
+
+
+    if not target.exists():
+        print(f"No test files found at constructed path: {target}")
+        return
+
     files = find_test_files(target)
     if not files:
         print(f"No test files found under {target}")
@@ -402,12 +439,13 @@ def main():
         "error_message",
     ]   
 
-
-    if args.csv is not None:
-        #w - creates a new file or overwrites existing
-        csv_file = open(args.csv, "w", newline="", encoding="utf-8")
+    if args.csv:
+        csv_subdir.mkdir(parents=True, exist_ok=True)
+        csv_path = csv_subdir / csv_name
+        csv_file = open(csv_path, "w", newline="", encoding="utf-8")
         csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         csv_writer.writeheader()
+        
 
     # Print table header
     print(f"{'file':60}  syn  exec  asrt  asserts  pass  fail  err  skip")
@@ -434,7 +472,7 @@ def main():
 
     if csv_file is not None:
         csv_file.close()
-        print(f"\nCSV written to: {args.csv}")
+        print(f"\nCSV written to: {csv_path}")
 
 
 if __name__ == "__main__":
