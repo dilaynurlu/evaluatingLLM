@@ -97,8 +97,28 @@ def make_client():
 
 
 def call_gemini(client, model_name: str, prompt: str) -> str:
+    
+    # --- Reveal Model Parameter Defaults ---
+    print(f"Fetching metadata for: {model_name}...")
+    model_info = client.models.get(model=model_name)
+
+    default_top_p = getattr(model_info, 'top_p', 'Not specified')
+    default_top_k = getattr(model_info, 'top_k', None)
+    top_k_display = default_top_k if default_top_k is not None else "None (Not applied)"
+    default_temp = getattr(model_info, 'temperature', 1.0)
+
+    print(f"  -> Default Temperature: {default_temp}")
+    print(f"  -> Default TopP: {default_top_p}")
+    print(f"  -> Default TopK: {top_k_display}")
+
+    #-------------------------------------------------------------------
     print(f"Calling model: {model_name}")
-    print(f"  -> prompt length: {len(prompt)} chars")
+
+    token_info = client.models.count_tokens(
+        model=model_name,
+        contents=prompt,
+    )
+    print(f"  -> estimated input tokens: {token_info.total_tokens}")
 
     response = client.models.generate_content(
         model=model_name,
@@ -106,6 +126,12 @@ def call_gemini(client, model_name: str, prompt: str) -> str:
     )
     print("  -> model call complete")
     # google-genai exposes a .text convenience property
+
+    if response.usage_metadata:
+        print(f"  -> output tokens: {response.usage_metadata.candidates_token_count}")
+    else:
+        print("  -> token usage metadata not available")
+    
     return response.text
 
 
@@ -126,7 +152,7 @@ def build_prompt_P0(template: str, func_entry: dict, n: int) -> str:
     prompt = prompt.replace("{{FUNCTION_NAME}}", function_name)
     prompt = prompt.replace("{{FUNCTION_DEFINITION}}", function_def)
     prompt = prompt.replace("{{FUNCTION_MODULE}}", function_module)
-    prompt = prompt.replace("{{N}}", str(n))
+    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
 
@@ -167,7 +193,7 @@ def build_prompt_P2(template: str, func_entry: dict, n: int) -> str:
     prompt = prompt.replace("{{FUNCTION_DEFINITION}}", function_def)
     prompt = prompt.replace("{{FUNCTION_MODULE}}", function_module)
     prompt = prompt.replace("{{EXAMPLE_TESTS}}", example_tests)
-    prompt = prompt.replace("{{N}}", str(n))
+    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
 
@@ -177,14 +203,14 @@ def build_prompt_P3_step1(template: str, func_entry: dict, n: int) -> str:
     prompt = prompt.replace("{{FUNCTION_NAME}}", func_entry["name"])
     prompt = prompt.replace("{{FUNCTION_DEFINITION}}", join_code_lines(func_entry.get("function_def", [])))
     prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry.get("module", ""))
-    prompt = prompt.replace("{{N}}", str(n))
+    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
 def build_prompt_P3_step2(template: str, step1_output: str, n: int) -> str:
     """Build the critique/refinement guide prompt (step 2) by injecting step1 output and N."""
     prompt = template
     prompt = prompt.replace("{{GENERATED_TEST_CASES_FROM_STEP_1}}", step1_output)
-    prompt = prompt.replace("{{N}}", str(n))
+    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
 def build_prompt_P3_step3(template: str, step1_output: str, step2_output: str, n: int) -> str:
@@ -192,10 +218,11 @@ def build_prompt_P3_step3(template: str, step1_output: str, step2_output: str, n
     prompt = template
     prompt = prompt.replace("{{GENERATED_TEST_CASES_FROM_STEP_1}}", step1_output)
     prompt = prompt.replace("{{GENERATED_CRITIQUE_FROM_STEP_2}}", step2_output)
-    prompt = prompt.replace("{{N}}", str(n))
+    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
 # ---------- Per-strategy generation ----------
+# If test case with the same name exists, it will be overwritten. So actually each LLM run overwrites old tests
 
 def generate_for_function_P0(client, model_name: str, func_entry: dict, n: int, out_dir: Path):
     template = load_prompt_template("P0")
@@ -328,15 +355,17 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
 """
 Usage examples:
 
+#gemini-3-pro   Request per minute:25    Tokens per minute:1M  Requests per day:250 
+
 # Generate P1 tests for all functions in functions_to_test.json
-python eval/scripts/generate_tests.py --prompt-strategy P1 --n-tests 5
+python eval/scripts/generate.py --prompt-strategy P1 --n-tests 5
 
 # Generate P2 (few-shot) tests for a single function
-python eval/scripts/generate_tests.py --prompt-strategy P2 --n-tests 5 --function-name get_auth_from_url
+python eval/scripts/generate.py --prompt-strategy P2 --n-tests 5 --function-name get_auth_from_url
 
 #Print prompts for all functions or one function
-python eval/scripts/generate_tests.py --prompt-strategy P0 --n-tests 3 --print-prompt
-python eval/scripts/generate_tests.py --prompt-strategy P1 --n-tests 2 --function-name parse_headers --print-prompt
+python eval/scripts/generate.py --prompt-strategy P0 --n-tests 3 --print-prompt
+python eval/scripts/generate.py --prompt-strategy P1 --n-tests 2 --function-name parse_headers --print-prompt
 """
 
 def main():
