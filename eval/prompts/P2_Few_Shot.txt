@@ -1,7 +1,7 @@
 You are given a target function from a Python library about HTTP requests.
 Additionally, you are also given several examples of test cases for the target function. 
 
-Your task is to use pytest and generate {{N}} complete, executable and unique test cases for this target function. 
+Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
 Use the given example test cases as guidance for structure, style, completeness, and formatting.
 
 The Python version is 3.12.7.
@@ -43,5 +43,6 @@ Output format requirements:
   ===TESTCASE_START===
   (test file content)
   ===TESTCASE_END===
+- In each of these delimeters, you should only define one test case with "def"
 
-Now generate the {{N}} unique test cases, following the example structure as closely as possible.
+Now generate the unique test cases, following the example structure as closely as possible.

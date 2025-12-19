@@ -1,5 +1,5 @@
-You wrote the initial {{N}} test cases and the critique below. 
-Now refine the initial {{N}} test cases based on your critique.
+You wrote the initial test cases and the critique below. 
+Now refine the initial test cases based on your critique.
 
 =================================================================================================================
 
@@ -23,7 +23,7 @@ Requirements:
   ===TESTCASE_START===
   (test file content)
   ===TESTCASE_END===
-- Each of these ===TESTCASE_START=== sections can only include one test case function definition. Helper function definitions are allowed. 
+- In each of these delimeters, you should only define one test case with "def"
   
 
-Now generate the refined {{N}} test cases. Make sure that you are only refining the initial {{N}} test cases you suggested. Do not add any extra test cases.
+Now generate the refined test cases. Make sure that you are only refining the initial test cases you suggested. Do not add any extra test cases.

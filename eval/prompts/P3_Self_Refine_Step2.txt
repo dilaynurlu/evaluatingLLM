@@ -1,4 +1,4 @@
-You generated the {{N}} test cases shown below.
+You generated the test cases shown below.
 Provide a critique identifying ways the test cases could be improved regarding coverage and good security practices.
 
 Do NOT rewrite the tests here.

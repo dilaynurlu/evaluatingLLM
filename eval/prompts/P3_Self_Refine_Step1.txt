@@ -1,5 +1,5 @@
 You are given a target function from a Python library about HTTP requests.
-Your task is to use pytest and generate {{N}} complete, executable and unique test cases for this target function. 
+Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
 The Python version is 3.12.7.
 The pytest version is 9.0.0.
 
@@ -34,5 +34,6 @@ Output format requirements:
   ===TESTCASE_START===
   (test file content)
   ===TESTCASE_END===
+- In each of these delimeters, you should only define one test case with "def"
 
-Now generate the initial {{N}} unique test cases.
+Now generate the initial unique test cases.
