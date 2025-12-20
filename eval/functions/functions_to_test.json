@@ -25,6 +25,7 @@
         "id": 1,
         "test_name": "test_get_auth_from_url",
         "test_file": "requests/tests/test_utils.py",
+        "test_nodeid": "requests/tests/test_utils.py::test_get_auth_from_url",
         "test_code": [
           "USER = PASSWORD = \"%!*'();:@&=+$,/?#[] \"",
           "ENCODED_USER = compat.quote(USER, \"\")",
@@ -100,6 +101,7 @@
         "id": 1,
         "test_name": "test_prepend_scheme_if_needed",
         "test_file": "requests/tests/test_utils.py",
+        "test_nodeid": "requests/tests/test_utils.py::test_prepend_scheme_if_needed",
         "test_code": [
           "@pytest.mark.parametrize(",
           "    \"value, expected\",",
@@ -181,6 +183,7 @@
       "id": 1,
       "test_name": "test_set_basicauth",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_set_basicauth",
       "test_code": [
         "@pytest.mark.parametrize(",
         "    \"username, password\",",
@@ -205,6 +208,7 @@
       "id": 2,
       "test_name": "test_basic_auth_str_is_always_native",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_basic_auth_str_is_always_native",
       "test_code": [
         "@pytest.mark.parametrize(",
         "    \"username, password, auth_str\",",
@@ -417,6 +421,7 @@
       "id": 1,
       "test_name": "test_DIGEST_HTTP_200_OK_GET",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGEST_HTTP_200_OK_GET",
       "test_code": [
         "def test_DIGEST_HTTP_200_OK_GET(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -439,6 +444,7 @@
       "id": 2,
       "test_name": "test_DIGEST_AUTH_RETURNS_COOKIE",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGEST_AUTH_RETURNS_COOKIE",
       "test_code": [
         "def test_DIGEST_AUTH_RETURNS_COOKIE(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -455,6 +461,7 @@
       "id": 3,
       "test_name": "test_DIGEST_AUTH_SETS_SESSION_COOKIES",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGEST_AUTH_SETS_SESSION_COOKIES",
       "test_code": [
         "def test_DIGEST_AUTH_SETS_SESSION_COOKIES(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -469,6 +476,7 @@
       "id": 4,
       "test_name": "test_DIGEST_STREAM",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGEST_STREAM",
       "test_code": [
         "def test_DIGEST_STREAM(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -486,6 +494,7 @@
       "id": 5,
       "test_name": "test_DIGESTAUTH_WRONG_HTTP_401_GET",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGESTAUTH_WRONG_HTTP_401_GET",
       "test_code": [
         "def test_DIGESTAUTH_WRONG_HTTP_401_GET(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -508,6 +517,7 @@
       "id": 6,
       "test_name": "test_DIGESTAUTH_QUOTES_QOP_VALUE",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_DIGESTAUTH_QUOTES_QOP_VALUE",
       "test_code": [
         "def test_DIGESTAUTH_QUOTES_QOP_VALUE(self, httpbin):",
         "    for authtype in self.digest_auth_algo:",
@@ -570,8 +580,9 @@
   "test_cases": [
     {
       "id": 1,
-      "test_name": "test_unquote_header_value_valid_and_is_filename",
+      "test_name": "test_valid",
       "test_file": "requests/tests/test_utils.py",
+      "test_nodeid": "requests/tests/test_utils.py::TestUnquoteHeaderValue::test_valid",
       "test_code": [
         "@pytest.mark.parametrize(",
         "    \"value, expected\",",
@@ -584,8 +595,15 @@
         "    ),",
         ")",
         "def test_valid(value, expected):",
-        "    assert unquote_header_value(value) == expected",
-        "",
+        "    assert unquote_header_value(value) == expected"
+      ]
+    },
+    {
+      "id": 2,
+      "test_name": "test_is_filename",
+      "test_file": "requests/tests/test_utils.py",
+      "test_nodeid": "requests/tests/test_utils.py::TestUnquoteHeaderValue::test_is_filename",
+      "test_code": [
         "def test_is_filename():",
         "    assert unquote_header_value('\"\\\\\\\\Comp\\\\Res\"', True) == \"\\\\\\\\Comp\\\\Res\""
       ]
@@ -637,6 +655,7 @@
       "id": 1,
       "test_name": "test__parse_content_type_header",
       "test_file": "requests/tests/test_utils.py",
+      "test_nodeid": "requests/tests/test_utils.py::test__parse_content_type_header",
       "test_code": [
         "@pytest.mark.parametrize(",
         "    \"value, expected\",",
@@ -750,6 +769,7 @@
       "id": 1,
       "test_name": "test_select_proxies",
       "test_file": "requests/tests/test_utils.py",
+      "test_nodeid": "requests/tests/test_utils.py::test_select_proxies",
       "test_code": [
         "http_proxies = {",
         "    \"http\": \"http://http.proxy\",",
@@ -844,6 +864,7 @@
       "id": 1,
       "test_name": "test_should_strip_auth_host_change",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_should_strip_auth_host_change",
       "test_code": [
         "def test_should_strip_auth_host_change(self):",
         "    s = requests.Session()",
@@ -856,6 +877,7 @@
       "id": 2,
       "test_name": "test_should_strip_auth_http_downgrade",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_should_strip_auth_http_downgrade",
       "test_code": [
         "def test_should_strip_auth_http_downgrade(self):",
         "    s = requests.Session()",
@@ -866,6 +888,7 @@
       "id": 3,
       "test_name": "test_should_strip_auth_https_upgrade",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_should_strip_auth_https_upgrade",
       "test_code": [
         "def test_should_strip_auth_https_upgrade(self):",
         "    s = requests.Session()",
@@ -891,6 +914,7 @@
       "id": 4,
       "test_name": "test_should_strip_auth_port_change",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_should_strip_auth_port_change",
       "test_code": [
         "def test_should_strip_auth_port_change(self):",
         "    s = requests.Session()",
@@ -903,6 +927,7 @@
       "id": 5,
       "test_name": "test_should_strip_auth_default_port",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_should_strip_auth_default_port",
       "test_code": [
         "@pytest.mark.parametrize(",
         "    \"old_uri, new_uri\",",
@@ -964,6 +989,7 @@
       "id": 1,
       "test_name": "test_auth_is_stripped_on_http_downgrade",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_auth_is_stripped_on_http_downgrade",
       "test_code": [
         "def test_auth_is_stripped_on_http_downgrade(self, httpbin, httpbin_secure, httpbin_ca_bundle):",
         "    r = requests.get(",
@@ -980,6 +1006,7 @@
       "id": 2,
       "test_name": "test_auth_is_retained_for_redirect_on_host",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_auth_is_retained_for_redirect_on_host",
       "test_code": [
         "def test_auth_is_retained_for_redirect_on_host(self, httpbin):",
         "    r = requests.get(httpbin(\"redirect/1\"), auth=(\"user\", \"pass\"))",
@@ -1139,6 +1166,7 @@
       "id": 1,
       "test_name": "test_HTTP_302_ALLOW_REDIRECT_GET",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_HTTP_302_ALLOW_REDIRECT_GET",
       "test_code": [
         "def test_HTTP_302_ALLOW_REDIRECT_GET(self, httpbin):",
         "    r = requests.get(httpbin('redirect', '1'))",
@@ -1151,6 +1179,7 @@
       "id": 2,
       "test_name": "test_HTTP_307_ALLOW_REDIRECT_POST",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_HTTP_307_ALLOW_REDIRECT_POST",
       "test_code": [
         "def test_HTTP_307_ALLOW_REDIRECT_POST(self, httpbin):",
         "    r = requests.post(",
@@ -1168,6 +1197,7 @@
       "id": 3,
       "test_name": "test_HTTP_307_ALLOW_REDIRECT_POST_WITH_SEEKABLE",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_HTTP_307_ALLOW_REDIRECT_POST_WITH_SEEKABLE",
       "test_code": [
         "def test_HTTP_307_ALLOW_REDIRECT_POST_WITH_SEEKABLE(self, httpbin):",
         "    byte_str = b'test'",
@@ -1186,6 +1216,7 @@
       "id": 4,
       "test_name": "test_HTTP_302_TOO_MANY_REDIRECTS",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_HTTP_302_TOO_MANY_REDIRECTS",
       "test_code": [
         "def test_HTTP_302_TOO_MANY_REDIRECTS(self, httpbin):",
         "    try:",
@@ -1203,6 +1234,7 @@
       "id": 5,
       "test_name": "test_fragment_maintained_on_redirect",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_fragment_maintained_on_redirect",
       "test_code": [
         "def test_fragment_maintained_on_redirect(self, httpbin):",
         "    fragment = '#view=edit&token=hunter2'",
@@ -1214,10 +1246,11 @@
     },
     {
       "id": 6,
-      "test_name": "test_HTTP_302_ALLOW_REDIRECT_GET_WITH_PARAMS",
+      "test_name": "test_HTTP_200_OK_GET_WITH_PARAMS",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_HTTP_200_OK_GET_WITH_PARAMS",
       "test_code": [
-        "def test_HTTP_302_ALLOW_REDIRECT_GET_WITH_PARAMS(self, httpbin):",
+        "def test_HTTP_200_OK_GET_WITH_PARAMS(self, httpbin):",
         "    heads = {'User-agent': 'Mozilla/5.0'}",
         "    r = requests.get(httpbin('user-agent'), headers=heads)",
         "    assert heads['User-agent'] in r.text",
@@ -1228,6 +1261,7 @@
       "id": 7,
       "test_name": "test_manual_redirect_with_partial_body_read",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_manual_redirect_with_partial_body_read",
       "test_code": [
         "def test_manual_redirect_with_partial_body_read(self, httpbin):",
         "    s = requests.Session()",
@@ -1249,6 +1283,7 @@
       "id": 8,
       "test_name": "test_redirect_with_wrong_gzipped_header",
       "test_file": "requests/tests/test_requests.py",
+      "test_nodeid": "requests/tests/test_requests.py::TestRequests::test_redirect_with_wrong_gzipped_header",
       "test_code": [
         "def test_redirect_with_wrong_gzipped_header(self, httpbin):",
         "    s = requests.Session()",
