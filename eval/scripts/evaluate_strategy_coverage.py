@@ -21,14 +21,15 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TESTS_BASE = PROJECT_ROOT / "eval" / "tests" / "generated_tests"
 CSV_BASE = PROJECT_ROOT / "eval" / "results" / "coverage"
+FUNCTIONS_TO_TEST_JSON = PROJECT_ROOT / "eval" / "functions" / "functions_to_test.json"
 
-
-def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int = 120) -> tuple[int, str]:
+def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int = 120, pytest_args: list[str]|None = None,) -> tuple[int, str]:
     """
     Run coverage+pytest for tests under `test_root`, storing coverage data at `data_file`.
 
     Executes:
-        coverage run --branch --data-file=<data_file> --source=<sut_root> -m pytest <test_root>
+       no pytest_args: coverage run --branch --data-file=<data_file> --source=<sut_root> -m pytest <test_root> 
+       given pytest_args: coverage run --branch --data-file=<data_file> --source=<sut_root> -m pytest <pytest_args>
 
     Parameters
     ----------
@@ -42,6 +43,11 @@ def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int 
         Path to the .coverage data file (passed via --data-file).
     timeout : int, optional
         Seconds to wait for coverage/pytest to finish before killing the process.
+    pytest_args : list[str] | None
+        This will be a list of test nodeids to pass to pytest so that only those tests are run.
+        If None, all tests under test_root are run.
+        
+
 
     Returns
     -------
@@ -55,9 +61,16 @@ def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int 
         "--branch",
         f"--data-file={data_file}",
         f"--source={sut_root}",
-        "-m", "pytest",
-        str(test_root),
+        "-m", "pytest", "-v",
     ]
+
+    if pytest_args:
+        cmd.extend(pytest_args) 
+        #no need to append test_root 
+    else: 
+        cmd.append(str(test_root))
+        # If no explicit pytest_args, run all tests under test_root
+    
 
     try:
         proc = subprocess.run(
@@ -66,8 +79,10 @@ def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int 
             stderr=subprocess.STDOUT,
             text=True,
             timeout=timeout,
-            cwd=str(test_root),  # run inside the test directory for stable discovery/imports
+            cwd=str(PROJECT_ROOT), 
         )
+
+        print(proc.stdout)
         
         return proc.returncode, ""
     except FileNotFoundError:
@@ -188,6 +203,74 @@ def aggregate_metrics(json_path: Path) -> dict:
     }
 
 
+def build_requests_functions_pytest_args(function_name: str | None) -> list[str]:
+    """
+    Build pytest args using exact nodeids stored in JSON under test_cases[].test_nodeid.
+
+    Expected JSON nodeid format (project-root relative):
+        "requests/tests/test_utils.py::TestUtils::test_foo"
+        "requests/tests/test_utils.py::test_bar"
+
+    Returns a list of absolute-path nodeids, safe for class-based tests.
+    """
+    if not FUNCTIONS_TO_TEST_JSON.exists():
+        raise FileNotFoundError(f"functions_to_test.json not found at {FUNCTIONS_TO_TEST_JSON}")
+
+    raw = json.loads(FUNCTIONS_TO_TEST_JSON.read_text(encoding="utf-8"))
+
+    # Filter by JSON entry name if requested
+    if function_name is not None:
+        filtered = [entry for entry in raw if entry.get("name") == function_name]
+        if not filtered:
+            available = sorted({e.get("name") for e in raw if "name" in e})
+            raise ValueError(
+                f'No entry with name="{function_name}" in {FUNCTIONS_TO_TEST_JSON}. '
+                f"Available names: {available}"
+            )
+        raw = filtered
+
+    nodeids: set[str] = set()
+
+    # Make sure that the given node ids are absolute paths for pytest. JSON file gives them relative
+    for entry in raw:
+        for tc in entry.get("test_cases", []):
+            nid = tc.get("test_nodeid")
+            if not nid:
+                continue
+
+            nid = str(nid).strip()
+            if not nid or nid.startswith("#"):
+                continue
+
+            # Split "file_path::rest..." like in "requests/tests/test_utils.py::TestUtils::test_foo"
+            parts = nid.split("::", 1)
+            file_part = parts[0].strip()
+            rest = parts[1] if len(parts) == 2 else ""
+
+            # Turn file_part into a absolute Path
+            file_path = Path(file_part)
+            if not file_path.is_absolute():
+                file_path = (PROJECT_ROOT / file_part).resolve() #now absolute 
+            else:
+                file_path = file_path.resolve()
+
+            if not file_path.exists():
+                raise FileNotFoundError(f"Test file from test_nodeid not found: {file_path} (nodeid={nid})")
+
+            # https://docs.pytest.org/en/stable/how-to/usage.html#select-tests
+            #Build back an absolute nodeid by adding the rest back 
+            abs_nodeid = str(file_path) + (f"::{rest}" if rest else "")
+            nodeids.add(abs_nodeid)
+
+    if not nodeids:
+        raise ValueError("No test_nodeid values found after filtering functions_to_test.json")
+
+    return sorted(nodeids)
+
+
+
+
+
 def main():
     """
 
@@ -206,17 +289,19 @@ def main():
       recording a short error message in the CSV and continuing.
 
     CLI:
-      --strategy  (required unless --requests) : e.g. P0, P1, ...
-      --tests     (optional)                  : tests folder under the strategy to run (e.g. get_auth_from_url)
-      --requests  (flag)                      : use the requests repo tests at <project_root>/requests/tests
-      --sut-root  (optional)                  : path to SUT root, default requests/src/requests
-      --label     (optional)                  : friendly label used in CSV/JSON filenames
-      --csv       (flag)                      : write CSV to eval/results/coverage/<strategy_or_requests>/coverage_results_<label>.csv
-      --json-dir  (flag)                      : keep coverage JSON/.coverage under eval/results/coverage/<strategy_or_requests>/json_results/
+      --strategy                (required unless --requests) : e.g. P0, P1, ...
+      --tests                   (optional)                  : tests folder under the strategy to run (e.g. get_auth_from_url)
+      --requests-all            (flag)                      : runs all the tests under requests repo at <project_root>/requests/tests
+      --reqests-functions  (flag)                      : runs only the example reuqests library test cases that were listed on the functions_to_test.json. For fair coverage comparison between generated LLM tests and official requests tests.     
+      --sut-root                (optional)                  : path to SUT root, default requests/src/requests
+      --label                   (optional)                  : friendly label used in CSV/JSON filenames
+      --csv                     (flag)                      : write CSV to eval/results/coverage/<strategy_or_requests>/coverage_results_<label>.csv
+      --json-dir                (flag)                      : keep coverage JSON/.coverage under eval/results/coverage/<strategy_or_requests>/json_results/
 
       Usage examples:
       python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --tests _basic_auth_str --csv --json-dir
       python ./eval/scripts/evaluate_strategy_coverage.py --requests --csv
+      python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --name get_auth_from_url --csv --json-dir
     """
     parser = argparse.ArgumentParser(
         description="Compute line+branch coverage for a group of tests."
@@ -232,9 +317,19 @@ def main():
         default=None,
     )
     parser.add_argument(
-        "--requests",
+        "--requests-all",
         action="store_true",
-        help="Run the requests project's own test-suite under <project_root>/requests/tests instead of generated_tests.",
+        help="Run the whole of requests project's own test-suite under <project_root>/requests/tests instead of generated_tests.",
+    )
+    parser.add_argument(
+        "--requests-functions",
+        action="store_true",
+        help="Run only the example requests library test cases that were listed on the functions_to_test.json for fair coverage comparison between generated LLM tests and official requests tests. We should not run all tests in requests if we want fair coverage, because not all of them are relavant to the functions we generated LLM tests for.",
+    )
+    parser.add_argument(
+        "--name",
+        default=None,
+        help="Only to be used when --requests-functions is set. Execute coverage for only one function (name) from functions_to_test.json. If name is not given, runs all functions listed in functions_to_test.json.",
     )
     parser.add_argument(
         "--sut-root",
@@ -258,21 +353,34 @@ def main():
     )
 
     args = parser.parse_args()
+    pytest_args = None # default. If --requests-functions is used, will be set to specific test nodeids by build_requests_functions_pytest_args()
 
     # Determine test_root
-    if args.requests:
+    if args.requests_all and args.requests_functions:
+        parser.error("Choose only one: --requests-all OR --requests-functions")
+
+    if args.requests_all:
         # ignore --strategy, run the official requests tests
-        requests_tests_root = PROJECT_ROOT / "requests" / "tests"
-        if args.tests:
-            test_root = (requests_tests_root / args.tests).resolve()
+        test_root = (PROJECT_ROOT / "requests" / "tests").resolve()
+        strategy_for_csv = "requests-all"
+        label = args.label or "requests-all"
+
+    elif args.requests_functions:
+        test_root = (PROJECT_ROOT / "requests" / "tests").resolve() #this actually wont be passed to pytest from run_coverage since we provide pytest.args
+
+        pytest_args = build_requests_functions_pytest_args(args.name)
+
+        if args.name:
+            strategy_for_csv = f"requests-functions-{args.name}"
+            label = args.label or f"requests-functions-{args.name}"
         else:
-            test_root = requests_tests_root.resolve()
-        strategy_for_csv = "requests"
-        label = args.label or (args.tests if args.tests else "requests")
+            strategy_for_csv = "requests-functions"
+            label = args.label or "requests-functions"
+
     else:
         # --strategy is required when not using --requests
         if not args.strategy:
-            parser.error("--strategy is required when --requests is not set")
+            parser.error("--strategy is required when neither --requests-all nor --requests-functions is set")
         strategy = args.strategy
         if args.tests:
             test_root = (TESTS_BASE / strategy / args.tests).resolve()
@@ -289,7 +397,7 @@ def main():
         print(f"ERROR: test_root must be a directory: {test_root}")
         return
 
-    sut_root = Path(args.sut_root).resolve()
+    sut_root = (PROJECT_ROOT / args.sut_root).resolve()
 
     # CSV path: always under eval/results/coverage/<strategy_or_requests>/coverage_results_<label>.csv
     csv_dir = CSV_BASE / strategy_for_csv
@@ -309,8 +417,14 @@ def main():
         data_file = tmpdir / ".coverage_data"
         keep_debug_files = False
 
+
+    #TODO: Delete print
+    if pytest_args:
+        print(f"Using pytest args: {pytest_args}")
+
+
     print(f"\nRunning coverage for group: {label} (tests: {test_root})")
-    returncode, run_err = run_coverage(test_root, sut_root=sut_root, data_file=data_file)
+    returncode, run_err = run_coverage(test_root, sut_root=sut_root, data_file=data_file, pytest_args=pytest_args,)
 
     print("\nExporting coverage JSON...")
     export_ok, export_out = export_coverage_json(data_file, json_file)
