@@ -219,6 +219,7 @@ def build_prompt_P3_step3(template: str, step1_output: str, step2_output: str, n
     prompt = prompt.replace("{{GENERATED_TEST_CASES_FROM_STEP_1}}", step1_output)
     prompt = prompt.replace("{{GENERATED_CRITIQUE_FROM_STEP_2}}", step2_output)
     #prompt = prompt.replace("{{N}}", str(n))
+    #TODO: delete n-tests in all replaces 
     return prompt
 
 # ---------- Per-strategy generation ----------
@@ -286,7 +287,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     # Step 1
     prompt1 = build_prompt_P3_step1(t1, func_entry, n)
 
-    #delete print statements
+    #TODO: delete print statements
     print(f"\n--- P3 Step 1 Prompt (function={func_entry['name']}) ---\n")
     print(prompt1)
     print("\n--- end prompt 1 ---\n")
@@ -296,7 +297,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     print(f"P3 Step 1: generating initial tests for: {func_entry['name']}")
     raw1 = call_gemini(client, model_name, prompt1)
 
-    #delete print statements
+    #TODO: delete print statements
     print(f"\n--- P3 Step 1 RAW OUTPUT (function={func_entry['name']}) ---\n")
     print(raw1)
     print("\n--- end raw1 ---\n")
@@ -305,7 +306,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     # Step 2
     prompt2 = build_prompt_P3_step2(t2, raw1, n)
 
-    #delete print statements
+    #TODO: delete print statements
     print(f"\n--- P3 Step 2 Prompt (uses Step1 output) ---\n")
     print(prompt2)
     print("\n--- end prompt 2 ---\n")
@@ -315,7 +316,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     print(f"P3 Step 2: generating critique for: {func_entry['name']}")
     raw2 = call_gemini(client, model_name, prompt2)
 
-    #delete print statements
+    #TODO: delete print statements
     print(f"\n--- P3 Step 2 RAW OUTPUT (critique) ---\n")
     print(raw2)
     print("\n--- end raw2 ---\n")
@@ -324,7 +325,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     # Step 3
     prompt3 = build_prompt_P3_step3(t3, raw1, raw2, n)
 
-    #delete print statements
+    #TODO: delete print statements
     print(f"\n--- P3 Step 3 Prompt (uses Step1 + Step2 outputs) ---\n")
     print(prompt3)
     print("\n--- end prompt 3 ---\n")
@@ -334,7 +335,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     print(f"P3 Step 3: generating refined tests for: {func_entry['name']}")
     raw3 = call_gemini(client, model_name, prompt3)
 
-    #delete print statements
+    #TODO:delete print statements
     print(f"\n--- P3 Step 3 RAW OUTPUT (refined tests) ---\n")
     print(raw3)
     print("\n--- end raw3 ---\n")
@@ -358,14 +359,14 @@ Usage examples:
 #gemini-3-pro   Request per minute:25    Tokens per minute:1M  Requests per day:250 
 
 # Generate P1 tests for all functions in functions_to_test.json
-python eval/scripts/generate.py --prompt-strategy P1 --n-tests 5
+python eval/scripts/generate.py --prompt-strategy P1 
 
 # Generate P2 (few-shot) tests for a single function
-python eval/scripts/generate.py --prompt-strategy P2 --n-tests 5 --function-name get_auth_from_url
+python eval/scripts/generate.py --prompt-strategy P2 --function-name get_auth_from_url
 
 #Print prompts for all functions or one function
-python eval/scripts/generate.py --prompt-strategy P0 --n-tests 3 --print-prompt
-python eval/scripts/generate.py --prompt-strategy P1 --n-tests 2 --function-name parse_headers --print-prompt
+python eval/scripts/generate.py --prompt-strategy P0  --print-prompt
+python eval/scripts/generate.py --prompt-strategy P1  --function-name parse_headers --print-prompt
 """
 
 def main():
@@ -381,6 +382,8 @@ def main():
         default="gemini-2.5-flash",
         help="Gemini model name (e.g. gemini-2.5-flash).",
     )
+
+    #TODO: delete n-tests
     parser.add_argument(
         "--n-tests",
         type=int,
