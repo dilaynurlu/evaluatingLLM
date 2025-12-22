@@ -139,6 +139,80 @@ echo 'export GOOGLE_API_KEY="your_api_key_here"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
+
+
+<br> 
+
+## 6. Docker Setup (macOS)
+
+LLM-generated tests may:  execute arbitrary Python code, access the filesystem and attempt network calls.
+
+Docker provides: filesystem isolation, optional network isolation and a clean, reproducible Python environment.
+
+Test generation (LLM calls) can be run locally.  
+**Test execution and evaluation is recommended to be run in Docker.**
+
+### Prerequisites
+
+- macOS, Linux, or Windows
+- Docker Desktop installed and running  
+- Can use the example Dockerfile provided in the repository
+
+
+<br>
+
+Build the Docker Image (one-time) from the project root:
+
+```bash
+docker build -t evaluatingllm-eval -f docker/Dockerfile .
+```
+
+Make the Docker wrapper script executable:
+
+```bash
+chmod +x eval/scripts/run_in_docker.sh
+```
+
+
+
+Run any evaluation command via:
+
+```bash
+./eval/scripts/run_in_docker.sh <command>
+```
+
+All results are written to `eval/results/` on your host system.
+
+#### Examples
+
+```bash
+./eval/scripts/run_in_docker.sh python eval/scripts/evaluate_strategy_correctness.py --strategy P0 --csv
+```
+
+```bash
+./eval/scripts/run_in_docker.sh python eval/scripts/evaluate_strategy_coverage.py --strategy P0 --csv
+```
+
+
+
+### Network Access
+
+By default, Docker runs with **no network access**.
+
+To enable network access explicitly:
+
+```bash
+./eval/scripts/run_in_docker.sh --net python eval/scripts/evaluate_strategy_correctness.py --strategy P0
+```
+
+
+### Notes
+
+- Your local Python virtual environment is **not used** inside Docker.
+- The container installs the PyPI requests module for dependencies. The wrapper script exports the PYTHONPATH to point to your local requests clone.
+- Docker is the recommended execution mode for this project.
+
+
 ------------------------------------------------------------------------
 <br>
 <br>
@@ -151,6 +225,8 @@ source ~/.zshrc
     │   └── src/
     │   └── tests/
     │   └── (...)
+    ├── docker/
+    │   └── Dockerfile
     ├── eval/
     │   └── functions/
     │       └── functions_to_test.json              #JSON list of all chosen functions to be tested from request library 
@@ -170,6 +246,7 @@ source ~/.zshrc
     │       └── evaluate_strategy_coverage.py
     │       └── evaluate_strategy_security.py
     │       └── generate.py
+    │   │   └── run_in_docker.sh
     │   └── tests/
     │       └── generated_tests/
     │           └── P0/
