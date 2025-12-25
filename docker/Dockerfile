@@ -5,10 +5,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
   && rm -rf /var/lib/apt/lists/*
 
-# Evaluation tooling.
-# Install requests from PyPI here only to pull its runtime dependencies.
-# At runtime we force Python to import the local reuqests repo clone via PYTHONPATH=/app/requests/src.
-# TODO: update after security analysis script 
+# Evaluation tooling + Requests runtime deps
 RUN pip install --no-cache-dir pytest coverage bandit ruff requests
+
+# Requests dev/test deps for fixtures like "httpbin".
+# Filter out "-e .[socks]" (editable install) because we don't need it in the image.
+COPY requests/requirements-dev.txt /tmp/requirements-dev.txt
+RUN sed '/^-e \./d' /tmp/requirements-dev.txt > /tmp/requirements-dev.filtered.txt \
+  && pip install --no-cache-dir -r /tmp/requirements-dev.filtered.txt
 
 CMD ["bash"]

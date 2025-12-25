@@ -56,7 +56,7 @@ Output should point to:
 
 ## 3. Install required Python packages
 
-Install testing, coverage, security, and LLM tooling:
+Install the core tooling used by the evaluation framework:
 
 ``` bash
 pip install --upgrade pip
@@ -72,6 +72,7 @@ pip list
 You should see (at least): - pytest - coverage - bandit - google-genai
 
 <br>
+
 
 
 ## 4. Requests Library Setup (Required)
@@ -107,6 +108,15 @@ Verify: Your `pip list` shows editable installs and locations; confirm `requests
 
 For coverage to measure your local copy of `requests`, make sure the local Requests code is the one importable (editable install or PYTHONPATH pointing to the clone).
 
+<br>
+
+>**IMPORTANT**: Install the `requests` development dependencies to run the `requests` tests`
+>```
+>cd requests
+>pip install -r requirements-dev.txt
+>```
+
+<br>
 
 ### Not recommended (PyPI install)
 

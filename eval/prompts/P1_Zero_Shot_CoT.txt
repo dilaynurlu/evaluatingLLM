@@ -1,7 +1,7 @@
 You are given a target function from a Python library about HTTP requests.
 Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
 The Python version is 3.12.7.
-The pytest version is 9.0.0.
+The pytest version is 8.4.2
 
 First, think through carefully, step by step, what kinds of test cases are needed: 
 edge cases, typical cases, invalid inputs, boundary conditions, special behavior, etc. 
@@ -12,13 +12,35 @@ Reason about what could go wrong or what needs to be validated for this function
 Target function name:
 {{FUNCTION_NAME}}
 
+
+
 Target function definition:
 {{FUNCTION_DEFINITION}}
+
+
 
 Target function module name:
 {{FUNCTION_MODULE}}
 
+
+
+Here are the imports used by the module that defines {{FUNCTION_NAME}}:
+{{IMPORTS}}
+
+
+
+The target function depends on the following helper or dependency functions:
+{{DEPENDENCIES}}
+
 ================================================================================================================= 
+
+Guidelines for dependencies:
+- These dependency functions are provided for behavioral context only.
+- You may use their observable behavior, inputs, outputs, and side effects to inform your test design and use mocks when needed.
+- Do NOT generate tests for dependency functions.
+- Do NOT reimplement dependency functions unless strictly necessary for isolation.
+- All generated tests must directly test only {{FUNCTION_NAME}}.
+
 
 
 Each generated test case must:
@@ -34,10 +56,10 @@ Each generated test case must:
 - Focus on high line and branch coverage. 
 
 Output format requirements:
-- Each test file must be separated using the delimiter:
-  ===TESTCASE_START===
+- Each test case must be separated using the delimiter:
+  ===TESTCASE_FILE_START===
   (test file content)
-  ===TESTCASE_END===
-- In each of these delimeters, you should only define one test case with "def"
+  ===TESTCASE_FILE_END===
+- In each of these delimeters, you should define only ONE test case with "def"
 
 Now: first do the reasoning, then generate the unique test cases.

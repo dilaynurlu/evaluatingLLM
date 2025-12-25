@@ -5,22 +5,45 @@ Your task is to use pytest and generate complete, executable and unique test cas
 Use the given example test cases as guidance for structure, style, completeness, and formatting.
 
 The Python version is 3.12.7.
-The pytest version is 9.0.0.
+The pytest version is 8.4.2
 
 =================================================================================================================
 Target function name:
 {{FUNCTION_NAME}}
 
+
+
 Target function definition:
 {{FUNCTION_DEFINITION}}
+
+
 
 Target function module name:
 {{FUNCTION_MODULE}}
 
-Example test cases:
+
+Here are the imports used by the module that defines {{FUNCTION_NAME}}:
+{{IMPORTS}}
+
+
+
+The target function depends on the following helper or dependency functions:
+{{DEPENDENCIES}}
+
+
+
+Example test cases for the target function:
 {{EXAMPLE_TESTS}}
 
 =================================================================================================================
+
+Guidelines for dependencies:
+- These dependency functions are provided for behavioral context only.
+- You may use their observable behavior, inputs, outputs, and side effects to inform your test design and use mocks when needed.
+- Do NOT generate tests for dependency functions.
+- Do NOT reimplement dependency functions unless strictly necessary for isolation.
+- All generated tests must directly test only {{FUNCTION_NAME}}.
+
 
 
 Each generated test cases must:
@@ -39,10 +62,10 @@ Each generated test cases must:
 
 Output format requirements:
 - Do not include any explanations or reasoning—output, include only the test case files.
-- Each generated test file must be separated using:
-  ===TESTCASE_START===
+- Each test case must be separated using the delimiter:
+  ===TESTCASE_FILE_START===
   (test file content)
-  ===TESTCASE_END===
-- In each of these delimeters, you should only define one test case with "def"
+  ===TESTCASE_FILE_END===
+- In each of these delimeters, you should define only ONE test case with "def"
 
 Now generate the unique test cases, following the example structure as closely as possible.
