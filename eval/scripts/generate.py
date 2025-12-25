@@ -54,12 +54,12 @@ def ensure_dir(path: Path):
 def split_testcases(raw_output: str) -> list[str]:
     """
     Extract individual test files from the model output using the
-    ===TESTCASE_START=== / ===TESTCASE_END=== delimiters.
+    ===TESTCASE_FILE_START=== / ===TESTCASE_FILE_END=== delimiters.
 
     Any reasoning or extra text outside these blocks (e.g. P1 CoT reasoning) is ignored.
     """
-    START = "===TESTCASE_START==="
-    END = "===TESTCASE_END==="
+    START = "===TESTCASE_FILE_START==="
+    END = "===TESTCASE_FILE_END==="
 
     parts = raw_output.split(START)
     test_files = []
@@ -137,45 +137,64 @@ def call_gemini(client, model_name: str, prompt: str) -> str:
 
 # ---------- Prompt building helpers ----------
 
-def build_prompt_P0(template: str, func_entry: dict, n: int) -> str:
+def build_prompt_P0(template: str, func_entry: dict) -> str:
     """
     P0 template uses:
       {{FUNCTION_NAME}}
       {{FUNCTION_DEFINITION}}
       {{N}}
+      {{IMPORTS}}
+      {{DEPENDENCIES}}
     """
-    function_name = func_entry["name"]
-    function_def = join_code_lines(func_entry.get("function_def", []))
-    function_module = func_entry["module"]
 
     prompt = template
-    prompt = prompt.replace("{{FUNCTION_NAME}}", function_name)
-    prompt = prompt.replace("{{FUNCTION_DEFINITION}}", function_def)
-    prompt = prompt.replace("{{FUNCTION_MODULE}}", function_module)
-    #prompt = prompt.replace("{{N}}", str(n))
+    prompt = prompt.replace("{{FUNCTION_NAME}}", func_entry["name"])
+    prompt = prompt.replace("{{FUNCTION_DEFINITION}}", join_code_lines(func_entry.get("function_def", [])))
+    prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry["module"])
+    prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
+    prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
     return prompt
 
 
-def build_prompt_P1(template: str, func_entry: dict, n: int) -> str:
+def build_prompt_P1(template: str, func_entry: dict) -> str:
     """
     P1 template has the same placeholders as P0, but includes CoT instructions.
     """
-    return build_prompt_P0(template, func_entry, n)
-
+    return build_prompt_P0(template, func_entry)
 
 def join_code_lines(lines: list[str]) -> str:
     return "\n".join(lines)
 
 
-def build_prompt_P2(template: str, func_entry: dict, n: int) -> str:
+def get_dependencies(func_entry: dict) -> str:
+    """
+    Concatenate dependency_function_def entries into a single space-separated string.
+    """
+    deps = func_entry.get("dependencies", []) or []
+
+    for dep in deps:
+        dep_def = dep.get("dependency_function_def")
+
+        # Short-circuit if dependency explicitly says there are none
+        if isinstance(dep_def, str) and dep_def.strip() == "No dependencies for this function were needed":
+            return "No dependencies for this function were needed"
+
+    blocks = []
+
+    for dep in deps:
+        dep_def = dep.get("dependency_function_def", [])
+        code_str = "\n\n" + join_code_lines(dep_def) 
+        blocks.append(code_str)
+
+    dependencies_str = "\n\n".join(blocks) if blocks else "# No dependencies"
+    return dependencies_str
+
+def build_prompt_P2(template: str, func_entry: dict) -> str:
     """
     P2 template additionally takes {{EXAMPLE_TESTS}},
     which we build from func_entry["test_cases"][*]["test_code"].
     It sends all the given example test cases.
     """
-    function_name = func_entry["name"]
-    function_def = join_code_lines(func_entry.get("function_def", []))
-    function_module = func_entry["module"]
 
     example_blocks = []
     for idx, tc in enumerate(func_entry.get("test_cases", []), start=1):
@@ -189,45 +208,45 @@ def build_prompt_P2(template: str, func_entry: dict, n: int) -> str:
     example_tests = "\n\n".join(example_blocks) if example_blocks else "# No example tests provided"
 
     prompt = template
-    prompt = prompt.replace("{{FUNCTION_NAME}}", function_name)
-    prompt = prompt.replace("{{FUNCTION_DEFINITION}}", function_def)
-    prompt = prompt.replace("{{FUNCTION_MODULE}}", function_module)
+    
     prompt = prompt.replace("{{EXAMPLE_TESTS}}", example_tests)
-    #prompt = prompt.replace("{{N}}", str(n))
+    prompt = prompt.replace("{{FUNCTION_NAME}}", func_entry["name"])
+    prompt = prompt.replace("{{FUNCTION_DEFINITION}}", join_code_lines(func_entry.get("function_def", [])))
+    prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry["module"])
+    prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
+    prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
     return prompt
 
 
-def build_prompt_P3_step1(template: str, func_entry: dict, n: int) -> str:
+def build_prompt_P3_step1(template: str, func_entry: dict) -> str:
     """Build the initial generation prompt (step 1)."""
     prompt = template
     prompt = prompt.replace("{{FUNCTION_NAME}}", func_entry["name"])
     prompt = prompt.replace("{{FUNCTION_DEFINITION}}", join_code_lines(func_entry.get("function_def", [])))
     prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry.get("module", ""))
-    #prompt = prompt.replace("{{N}}", str(n))
+    prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
+    prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
     return prompt
 
-def build_prompt_P3_step2(template: str, step1_output: str, n: int) -> str:
+def build_prompt_P3_step2(template: str, step1_output: str) -> str:
     """Build the critique/refinement guide prompt (step 2) by injecting step1 output and N."""
     prompt = template
     prompt = prompt.replace("{{GENERATED_TEST_CASES_FROM_STEP_1}}", step1_output)
-    #prompt = prompt.replace("{{N}}", str(n))
     return prompt
 
-def build_prompt_P3_step3(template: str, step1_output: str, step2_output: str, n: int) -> str:
+def build_prompt_P3_step3(template: str, step1_output: str, step2_output: str) -> str:
     """Build the final refinement prompt (step 3) by injecting step1 & step2 outputs and N."""
     prompt = template
     prompt = prompt.replace("{{GENERATED_TEST_CASES_FROM_STEP_1}}", step1_output)
     prompt = prompt.replace("{{GENERATED_CRITIQUE_FROM_STEP_2}}", step2_output)
-    #prompt = prompt.replace("{{N}}", str(n))
-    #TODO: delete n-tests in all replaces 
     return prompt
 
 # ---------- Per-strategy generation ----------
 # If test case with the same name exists, it will be overwritten. So actually each LLM run overwrites old tests
 
-def generate_for_function_P0(client, model_name: str, func_entry: dict, n: int, out_dir: Path):
+def generate_for_function_P0(client, model_name: str, func_entry: dict, out_dir: Path):
     template = load_prompt_template("P0")
-    prompt = build_prompt_P0(template, func_entry, n)
+    prompt = build_prompt_P0(template, func_entry)
     print(f"Generating P0 tests for function: {func_entry['name']}")
 
     raw_output = call_gemini(client, model_name, prompt)
@@ -241,9 +260,9 @@ def generate_for_function_P0(client, model_name: str, func_entry: dict, n: int, 
             f.write(content)
 
 
-def generate_for_function_P1(client, model_name: str, func_entry: dict, n: int, out_dir: Path):
+def generate_for_function_P1(client, model_name: str, func_entry: dict, out_dir: Path):
     template = load_prompt_template("P1")
-    prompt = build_prompt_P1(template, func_entry, n)
+    prompt = build_prompt_P1(template, func_entry)
     print(f"Generating P1 tests for function: {func_entry['name']}")
 
     raw_output = call_gemini(client, model_name, prompt)
@@ -257,9 +276,9 @@ def generate_for_function_P1(client, model_name: str, func_entry: dict, n: int, 
             f.write(content)
 
 
-def generate_for_function_P2(client, model_name: str, func_entry: dict, n: int, out_dir: Path):
+def generate_for_function_P2(client, model_name: str, func_entry: dict, out_dir: Path):
     template = load_prompt_template("P2")
-    prompt = build_prompt_P2(template, func_entry, n)
+    prompt = build_prompt_P2(template, func_entry)
     print(f"Generating P2 tests for function: {func_entry['name']}")
 
     raw_output = call_gemini(client, model_name, prompt)
@@ -272,7 +291,7 @@ def generate_for_function_P2(client, model_name: str, func_entry: dict, n: int, 
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
 
-def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, out_dir: Path):
+def generate_for_function_P3(client, model_name: str, func_entry: dict, out_dir: Path):
     """
     Three-step self-refine flow:
       1) Generate initial tests (step1)
@@ -285,7 +304,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     t3 = load_prompt_template("P3_STEP3")
 
     # Step 1
-    prompt1 = build_prompt_P3_step1(t1, func_entry, n)
+    prompt1 = build_prompt_P3_step1(t1, func_entry)
 
     #TODO: delete print statements
     print(f"\n--- P3 Step 1 Prompt (function={func_entry['name']}) ---\n")
@@ -304,7 +323,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     #delete
 
     # Step 2
-    prompt2 = build_prompt_P3_step2(t2, raw1, n)
+    prompt2 = build_prompt_P3_step2(t2, raw1)
 
     #TODO: delete print statements
     print(f"\n--- P3 Step 2 Prompt (uses Step1 output) ---\n")
@@ -323,7 +342,7 @@ def generate_for_function_P3(client, model_name: str, func_entry: dict, n: int, 
     #delete
 
     # Step 3
-    prompt3 = build_prompt_P3_step3(t3, raw1, raw2, n)
+    prompt3 = build_prompt_P3_step3(t3, raw1, raw2)
 
     #TODO: delete print statements
     print(f"\n--- P3 Step 3 Prompt (uses Step1 + Step2 outputs) ---\n")
@@ -383,13 +402,6 @@ def main():
         help="Gemini model name (e.g. gemini-2.5-flash).",
     )
 
-    #TODO: delete n-tests
-    parser.add_argument(
-        "--n-tests",
-        type=int,
-        default=5,
-        help="Number of tests (N) to request from the LLM.",
-    )
     parser.add_argument(
         "--function-name",
         help="If provided, only generate for this function name from the JSON; otherwise, generate for all.",
@@ -412,24 +424,23 @@ def main():
                 continue
 
             func_name = func_entry["name"]
-            n = args.n_tests
             strat = args.prompt_strategy
 
             template = load_prompt_template(strat) if strat != "P3" else load_prompt_template("P3_STEP1")
             if strat == "P0":
-                prompt_text = build_prompt_P0(template, func_entry, n)
+                prompt_text = build_prompt_P0(template, func_entry)
             elif strat == "P1":
-                prompt_text = build_prompt_P1(template, func_entry, n)
+                prompt_text = build_prompt_P1(template, func_entry)
             elif strat == "P2":
-                prompt_text = build_prompt_P2(template, func_entry, n)
+                prompt_text = build_prompt_P2(template, func_entry)
             elif strat == "P3":
                 # Prints only the Step1 prompt. Steps 2/3 require model outputs.
-                prompt_text = build_prompt_P3_step1(template, func_entry, n)
+                prompt_text = build_prompt_P3_step1(template, func_entry)
             else:
                 raise SystemExit(f"Unknown strategy: {strat}")
 
             print("\n" + "=" * 80)
-            print(f"Prompt for strategy={strat} function={func_name} (N={n}):\n")
+            print(f"Prompt for strategy={strat} function={func_name}:\n")
             print(prompt_text)
             print("\n" + "=" * 80 + "\n")
         return
@@ -447,13 +458,13 @@ def main():
         print(f"Processing function: {func_name} -> output dir: {strategy_dir}")
 
         if args.prompt_strategy == "P0":
-            generate_for_function_P0(client, args.model_name, func_entry, args.n_tests, strategy_dir)
+            generate_for_function_P0(client, args.model_name, func_entry, strategy_dir)
         elif args.prompt_strategy == "P1":
-            generate_for_function_P1(client, args.model_name, func_entry, args.n_tests, strategy_dir)
+            generate_for_function_P1(client, args.model_name, func_entry, strategy_dir)
         elif args.prompt_strategy == "P2":
-            generate_for_function_P2(client, args.model_name, func_entry, args.n_tests, strategy_dir)
+            generate_for_function_P2(client, args.model_name, func_entry, strategy_dir)
         elif args.prompt_strategy == "P3":
-            generate_for_function_P3(client, args.model_name, func_entry, args.n_tests, strategy_dir)
+            generate_for_function_P3(client, args.model_name, func_entry, strategy_dir)
 
 
 if __name__ == "__main__":

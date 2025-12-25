@@ -418,10 +418,6 @@ def main():
         keep_debug_files = False
 
 
-    #TODO: Delete print
-    if pytest_args:
-        print(f"Using pytest args: {pytest_args}")
-
 
     print(f"\nRunning coverage for group: {label} (tests: {test_root})")
     returncode, run_err = run_coverage(test_root, sut_root=sut_root, data_file=data_file, pytest_args=pytest_args,)
