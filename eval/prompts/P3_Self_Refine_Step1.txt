@@ -1,6 +1,6 @@
 You are given a target function from a Python library about HTTP requests.
 Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
-The Python version is 3.12.7.
+The Python version is 3.11.
 The pytest version is 8.4.2
 
 =================================================================================================================
@@ -19,43 +19,58 @@ Target function module name:
 
 
 
-Here are the imports used by the module that defines {{FUNCTION_NAME}}:
+Imports used by the module that defines {{FUNCTION_NAME}}:
 {{IMPORTS}}
 
 
 
-The target function depends on the following helper or dependency functions:
+Dependency or helper functions for the target function (for context only):
 {{DEPENDENCIES}}
 
 =================================================================================================================
 
-Guidelines for dependencies:
-- These dependency functions are provided for behavioral context only.
-- You may use their observable behavior, inputs, outputs, and side effects to inform your test design and use mocks when needed.
-- Do NOT generate tests for dependency functions.
-- Do NOT reimplement dependency functions unless strictly necessary for isolation.
-- All generated tests must directly test only {{FUNCTION_NAME}}.
+For generating the tests, follow these rules:
 
+HARD CONSTRAINTS (non-negotiable):
+1. You MUST output one or more test files. Each test file is delimited by:
+===TESTCASE_FILE_START===
+<python code>
+===TESTCASE_FILE_END===
 
+2. Inside EACH test file:
+2.1 There MUST be EXACTLY ONE function definition whose name starts with "test_".
+- Exactly one "def test_" is allowed.
+- ZERO other "def test_" functions are allowed.
+- No nested test functions.
+2.2 The file MUST test EXACTLY ONE scenario / behavior.
+- Do NOT combine multiple cases in one test.
+- No "Case 1/Case 2/..." sections.
+- No multiple input variations in one test.
+- No multiple independent asserts for different behaviors.
+(Multiple asserts are allowed ONLY if they all validate the SAME single scenario, e.g., value equality + type.)
 
-Each generated test case must:
-- Be fully self-contained and executable as its own file.
-- You are not allowed to paste the target function into the test file for self-containtment purposes. You may only call the actual target function from the module {{FUNCTION_MODULE}}.
+3. Self-containment rules: 
+- The test file MUST be executable as-is by pytest.
+- Do not rely on shared state between test cases.
+- You MUST NOT paste or reimplement {{FUNCTION_NAME}} in the test file.
+- You MUST import {{FUNCTION_NAME}} from {{FUNCTION_MODULE}} and call it.
+- Include all necessary imports correctly to avoid collection failures.
+- Dependency/helper functions are provided for context only; do NOT write tests for them.
+- All generated tests must directly only {{FUNCTION_NAME}}.
+- Do NOT reimplement dependency functions, prefer mocking and define the mocks correctly by inspecting the provided dependencies.
+- Make sure you define mock attributes correctly and avoid causing "AttributeError: Mock object has no attribute" 
+
+4. Output rules:
 - Do not include Markdown code fences (```), output raw Python files only.
-- Include all necessary imports.
-- Define any required inputs or mock data/network.
-- Invoke the function under test.
-- Not rely on shared state between test cases.
-- Be unique.
-- Consider good security hygiene practices.
-- Focus on high line and branch coverage.
+- Do NOT output any text outside the delimiters.
+- Every delimiter block must be a complete standalone python file.
 
-Output format requirements:
-- Do NOT include any reasoning or explanations in this step.
-- Each test case must be separated using the delimiter:
-  ===TESTCASE_FILE_START===
-  (test file content)
-  ===TESTCASE_FILE_END===
-- In each of these delimeters, you should define only ONE test case with "def"
 
-Now generate the initial unique test cases.
+5. Quality target:
+- Focus on a single case per generated test file. 
+- Prefer tests that improve branch/line coverage of {{FUNCTION_NAME}}.
+- Use good security hygiene. 
+
+
+Now generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}. 
+Validate the hard constraints internally before you output. 
