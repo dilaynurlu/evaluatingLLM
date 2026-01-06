@@ -16,7 +16,8 @@ coverage_debug/
 *.xml
 
 # Generated test cases
-generated_tests/
+old_tests/
+
 
 # Editor settings
 .vscode/
@@ -28,4 +29,5 @@ generated_tests/
 # Ignore requests library. Clone inside project root and run pip install -e requests/ to use it 
 requests/
 
-
+#Notebooks
+.ipynb_checkpoints/

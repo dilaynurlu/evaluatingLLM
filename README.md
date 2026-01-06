@@ -54,13 +54,13 @@ Output should point to:
 <br>
 
 
-## 3. Install required Python packages
+## 3. Install required Python packages and run Jupyter Notebooks
 
 Install the core tooling used by the evaluation framework:
 
 ``` bash
 pip install --upgrade pip
-pip install pytest coverage bandit ruff google-genai
+pip install pytest coverage bandit ruff google-genai jupyterlab ipykernel pandas matplotlib seaborn plotly 
 ```
 
 Verify:
@@ -70,6 +70,13 @@ pip list
 ```
 
 You should see (at least): - pytest - coverage - bandit - google-genai
+
+If you want to use the notebook to plot results for the analysis with CSV files, Register the virtual environment as a Jupyter kernel, and start JupyterLab from the repository root:
+
+``` bash
+python -m ipykernel install --user --name evaluatingllm --display-name "evaluatingLLM (venv)"
+jupyter lab notebooks/analysis.ipynb
+```
 
 <br>
 
