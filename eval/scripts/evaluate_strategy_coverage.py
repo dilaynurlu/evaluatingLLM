@@ -14,6 +14,7 @@ Evaluate line & branch coverage for a group of tests using coverage.py.
 import argparse
 import csv
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -23,7 +24,13 @@ TESTS_BASE = PROJECT_ROOT / "eval" / "tests" / "generated_tests"
 CSV_BASE = PROJECT_ROOT / "eval" / "results" / "coverage"
 FUNCTIONS_TO_TEST_JSON = PROJECT_ROOT / "eval" / "functions" / "functions_to_test.json"
 
-def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int = 120, pytest_args: list[str]|None = None,) -> tuple[int, str]:
+def run_coverage(
+    test_root: Path,
+    sut_root: Path,
+    data_file: Path,
+    timeout: int = 120,
+    pytest_args: list[str] | None = None,
+) -> tuple[int, str, dict]:
     """
     Run coverage+pytest for tests under `test_root`, storing coverage data at `data_file`.
 
@@ -51,9 +58,10 @@ def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int 
 
     Returns
     -------
-    tuple[int, str]
+    tuple[int, str, dict]
         - returncode: subprocess exit code
         - error_message: non-empty when an extraordinary error occurred (missing binary, timeout).
+        - test_stats: dict with parsed pytest stats, e.g. {"tests_run": int, "collected": int}. How many tests for coverage
     """
 
     cmd = [
@@ -83,12 +91,56 @@ def run_coverage(test_root: Path, sut_root: Path, data_file: Path, timeout: int 
         )
 
         print(proc.stdout)
-        
-        return proc.returncode, ""
+
+        test_stats = _parse_pytest_test_counts(proc.stdout)
+        return proc.returncode, "", test_stats
     except FileNotFoundError:
-        return -1, "coverage or pytest not found on PATH"
+        return -1, "coverage or pytest not found on PATH", {"tests_run": 0, "collected": 0}
     except subprocess.TimeoutExpired as e:
-        return -2, f"coverage run timed out after {timeout}s"
+        return -2, f"coverage run timed out after {timeout}s", {"tests_run": 0, "collected": 0}
+
+
+def _parse_pytest_test_counts(output: str) -> dict:
+    """
+    Parse pytest output text to estimate how many tests actually ran.
+
+    Returns a dict with keys:
+      - tests_run: sum of executed test outcomes (passed, failed, error(s), skipped, xfailed, xpassed, rerun(s))
+      - collected: number reported by "collected N items" if present, else 0
+
+    Notes:
+    - Pytest prints a summary like "=== 5 passed, 1 skipped in 0.30s ===".
+      We scan the entire output for tokens of the form "<num> <keyword>" where
+      keyword is one of the recognized outcome words, and sum them.
+    - "warnings" and "deselected" are not counted as executed tests.
+    """
+    if not output:
+        return {"tests_run": 0, "collected": 0}
+
+    # Count outcomes from summary lines
+    outcome_map = {
+        "passed": "passed",
+        "failed": "failed",
+        "error": "error",
+        "errors": "error",
+        "skipped": "skipped",
+        "xfailed": "xfailed",
+        "xpassed": "xpassed",
+        "rerun": "rerun",
+        "reruns": "rerun",
+    }
+
+    totals: dict[str, int] = {k: 0 for k in set(outcome_map.values())}
+    for num, word in re.findall(r"(\d+)\s+(passed|failed|error|errors|skipped|xfailed|xpassed|rerun|reruns)\b", output):
+        totals[outcome_map[word]] += int(num)
+
+    tests_run = sum(totals.values())
+
+    # Parse collected items line, e.g., "collected 12 items" or "collected 12 items / 2 deselected"
+    m = re.search(r"collected\s+(\d+)\s+items?\b", output)
+    collected = int(m.group(1)) if m else 0
+
+    return {"tests_run": tests_run, "collected": collected}
 
 
 def export_coverage_json(data_file: Path, json_path: Path, timeout: int = 30) -> tuple[bool, str]:
@@ -420,7 +472,9 @@ def main():
 
 
     print(f"\nRunning coverage for group: {label} (tests: {test_root})")
-    returncode, run_err = run_coverage(test_root, sut_root=sut_root, data_file=data_file, pytest_args=pytest_args,)
+    returncode, run_err, test_stats = run_coverage(
+        test_root, sut_root=sut_root, data_file=data_file, pytest_args=pytest_args,
+    )
 
     print("\nExporting coverage JSON...")
     export_ok, export_out = export_coverage_json(data_file, json_file)
@@ -453,6 +507,7 @@ def main():
         with csv_path.open("a", newline="", encoding="utf-8") as f:
             fieldnames = [
                 "label",
+                "tests_run",
                 "total_statements",
                 "covered_lines",
                 "percent_line_coverage",
@@ -467,6 +522,7 @@ def main():
                 writer.writeheader()
             row = {"label": label}
             row.update(metrics)
+            row["tests_run"] = int(test_stats.get("tests_run", 0))
             row["error"] = " ".join((error_summary or "").split())[:500]
             writer.writerow(row)
         print(f"\nResults appended to {csv_path}")

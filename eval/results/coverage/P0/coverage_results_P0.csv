@@ -1,2 +1,2 @@
-label,total_statements,covered_lines,percent_line_coverage,total_branches,covered_branches,percent_branch_coverage,percent_total_coverage,error
-P0,2200,930,42.27272727272727,780,168,21.53846153846154,36.84563758389262,
+label,tests_run,total_statements,covered_lines,percent_line_coverage,total_branches,covered_branches,percent_branch_coverage,percent_total_coverage,error
+P0,64,2200,930,42.27272727272727,780,168,21.53846153846154,36.84563758389262,
