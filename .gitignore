@@ -31,3 +31,6 @@ requests/
 
 #Notebooks
 .ipynb_checkpoints/
+
+#Security jsons
+eval/results/security/P*/json 
