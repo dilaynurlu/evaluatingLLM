@@ -153,6 +153,7 @@ def build_prompt_P0(template: str, func_entry: dict) -> str:
     prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry["module"])
     prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
     prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
+    prompt = prompt.replace("{{SETUP_NOTES}}", func_entry.get("setup_notes", ""))
     return prompt
 
 
@@ -215,6 +216,7 @@ def build_prompt_P2(template: str, func_entry: dict) -> str:
     prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry["module"])
     prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
     prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
+    prompt = prompt.replace("{{SETUP_NOTES}}", func_entry.get("setup_notes", ""))
     return prompt
 
 
@@ -226,6 +228,7 @@ def build_prompt_P3_step1(template: str, func_entry: dict) -> str:
     prompt = prompt.replace("{{FUNCTION_MODULE}}", func_entry.get("module", ""))
     prompt = prompt.replace("{{DEPENDENCIES}}", get_dependencies(func_entry))
     prompt = prompt.replace("{{IMPORTS}}", join_code_lines(func_entry.get("imports", [])))
+    prompt = prompt.replace("{{SETUP_NOTES}}", func_entry.get("setup_notes", ""))
     return prompt
 
 def build_prompt_P3_step2(template: str, step1_output: str) -> str:
