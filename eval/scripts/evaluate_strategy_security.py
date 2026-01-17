@@ -425,19 +425,6 @@ def scan_aspect2(text: str, file_path: Path) -> dict:
     }
 
 
-def iter_test_files(strategy_root: Path):
-    """
-    Yield (function_name, file_path) for all *.py test files under:
-      strategy_root/<function_name>/*.py
-
-    """
-    for func_dir in sorted([p for p in strategy_root.iterdir() if p.is_dir()]):
-        function_name = func_dir.name
-        for py_file in sorted(func_dir.glob("*.py")):
-            if py_file.is_file():
-                yield function_name, py_file
-
-
 # -----------------------------
 # Requests functions mode helpers
 # -----------------------------
@@ -580,6 +567,67 @@ def _ensure_requests_tests_path(rel_file: str) -> Path:
     raise FileNotFoundError(f"Cannot resolve test file from nodeid component: {rel_file}")
 
 
+def _collect_strategy_test_nodeids(strategy_root: Path) -> List[tuple[str, str, Path]]:
+    """
+    Use pytest --collect-only to collect all test nodeids from a strategy directory.
+    Returns list of (nodeid, function_name, original_file_path) for all collected tests.
+    """
+    # Build list of test files grouped by function
+    test_files_by_func: Dict[str, List[Path]] = {}
+    for func_dir in sorted([p for p in strategy_root.iterdir() if p.is_dir()]):
+        function_name = func_dir.name
+        test_files_by_func[function_name] = sorted([f for f in func_dir.glob("*.py") if f.is_file()])
+    
+    # Get relative paths for pytest
+    rel_strategy_root = strategy_root.relative_to(PROJECT_ROOT)
+    
+    try:
+        proc = subprocess.run(
+            ["pytest", "--collect-only", "-q", str(rel_strategy_root)],
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=180,
+        )
+    except FileNotFoundError as e:
+        raise RuntimeError("pytest_not_found") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError("pytest_collect_timeout") from e
+    
+    out = (proc.stdout or "").splitlines()
+    collected: List[tuple[str, str, Path]] = []
+    
+    for line in out:
+        s = line.strip()
+        if not s or "::" not in s:
+            continue
+        # In -q mode, nodeids are printed one per line
+        if s.endswith("]") or "::test_" in s:
+            # Parse nodeid to get file path and function name
+            # Expected format: eval/tests/generated_tests/P3/function_name/test_file.py::test_function[params]
+            try:
+                rel_file, class_chain, func_name = _parse_nodeid(s)
+                # Determine which function directory this belongs to
+                parts = Path(rel_file).parts
+                # Look for pattern: .../generated_tests/<strategy>/<function_name>/...
+                func_name_from_path = None
+                for i, part in enumerate(parts):
+                    if part == "generated_tests" and i + 2 < len(parts):
+                        func_name_from_path = parts[i + 2]  # strategy is i+1, function is i+2
+                        break
+                
+                if func_name_from_path:
+                    # Find the original file path
+                    file_path = PROJECT_ROOT / rel_file
+                    collected.append((s, func_name_from_path, file_path))
+            except Exception:
+                # Skip malformed nodeids
+                continue
+    
+    return collected
+
+
 def _expand_nodeids_via_pytest(base_nodeids: Dict[str, str]) -> List[tuple[str, str]]:
     """
     Use pytest --collect-only to expand parametrized tests.
@@ -689,13 +737,20 @@ def _expand_nodeids_via_pytest(base_nodeids: Dict[str, str]) -> List[tuple[str, 
 
 
 def main():
+    '''
+    python eval/scripts/evaluate_strategy_security.py --strategy P3
+    python eval/scripts/evaluate_strategy_security.py --requests-functions
+    python eval/scripts/evaluate_strategy_security.py --requests-functions --save-json-bandit --save-json-aspect1
+
+    python eval/scripts/evaluate_strategy_security.py --strategy P3 --label P3_rerun_jan2026
+
+    '''
     parser = argparse.ArgumentParser(description="Evaluate OWASP-mapped security aspects on generated tests.")
     parser.add_argument("--strategy", required=False, help="Strategy folder under eval/tests/generated_tests (P0..P3).")
     parser.add_argument("--label", default=None, help="Optional label for the CSV filename.")
     parser.add_argument("--save-json-bandit",action="store_true", help="Save Bandit JSON artifacts under eval/results/security/<strategy>/json/bandit/<function_name>/",)
     parser.add_argument("--save-json-aspect1",action="store_true", help="Save Aspect 1 regex matches as a JSON artifact under eval/results/security/<strategy>/json/aspect1/<function_name>/",)
     parser.add_argument("--requests-functions", action="store_true", dest="requests_functions", help="Analyze ONLY the requests tests listed in functions_to_test.json (by nodeid) and save under results/security/requests-functions.")
-    parser.add_argument("--collect-from-pytest", action="store_true", dest="collect_from_pytest", help="In --requests-functions mode, expand parametrized tests using pytest --collect-only so each param case is scanned.")
     args = parser.parse_args()
 
     # Determine mode (generated tests vs. requests-functions subset)
@@ -703,17 +758,14 @@ def main():
         strategy = "requests-functions"
         label = args.label or strategy
         out_dir = (CSV_BASE / strategy).resolve()
-        # Load nodeids mapping
+        # Load nodeids mapping and expand via pytest
         nodeid_to_func = _load_requests_nodeids(FUNC_JSON_PATH)
         if not nodeid_to_func:
             raise SystemExit(f"ERROR: No nodeids found in {FUNC_JSON_PATH}")
-        if args.collect_from_pytest:
-            try:
-                targets = _expand_nodeids_via_pytest(nodeid_to_func)
-            except Exception as e:
-                print(f"WARN: pytest collection failed ({e}); falling back to JSON nodeids only.")
-                targets = list(nodeid_to_func.items())
-        else:
+        try:
+            targets = _expand_nodeids_via_pytest(nodeid_to_func)
+        except Exception as e:
+            print(f"WARN: pytest collection failed ({e}); falling back to JSON nodeids only.")
             targets = list(nodeid_to_func.items())
     else:
         if not args.strategy:
@@ -724,6 +776,14 @@ def main():
         strategy_root = (TESTS_BASE / strategy).resolve()
         if not strategy_root.exists() or not strategy_root.is_dir():
             raise SystemExit(f"ERROR: strategy root not found or not a directory: {strategy_root}")
+        
+        # Collect tests via pytest
+        try:
+            targets = _collect_strategy_test_nodeids(strategy_root)
+            if not targets:
+                raise SystemExit(f"ERROR: pytest collection returned no tests for {strategy_root}")
+        except RuntimeError as e:
+            raise SystemExit(f"ERROR: pytest collection failed: {e}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / f"security_results_{label}.csv"
@@ -847,72 +907,79 @@ def main():
                 writer.writerow(row)
 
         else:
-            for function_name, py_file in iter_test_files(strategy_root):
+            # Strategy mode: scan individual test functions collected via pytest
+            tmp_root = out_dir / "tmp_snippets"
+            tmp_root.mkdir(parents=True, exist_ok=True)
+            
+            for nodeid, function_name, src_file in targets:
                 scanned += 1
                 row = {
                     "strategy": strategy,
                     "function_name": function_name,
-                    "test_file": str(py_file.relative_to(PROJECT_ROOT)),
+                    "test_file": nodeid,
                     "error": "",
                 }
                 try:
-                    text = py_file.read_text(encoding="utf-8", errors="replace")
-                    # Strip comments to avoid false positives in regex heuristics
-                    scan_text = strip_comments(text)
-
+                    rel_file, class_chain, func_name = _parse_nodeid(nodeid)
+                    snippet = _extract_snippet_from_file(src_file, class_chain, func_name)
+                    
+                    # Create a temp file per nodeid for bandit analysis
+                    safe_name = (
+                        nodeid.replace("/", "__").replace("::", "__").replace("[", "_").replace("]", "_")
+                    ) + ".py"
+                    tmp_file = tmp_root / safe_name
+                    tmp_file.write_text(snippet, encoding="utf-8")
+                    
+                    # Strip comments for regex heuristics
+                    scan_text = strip_comments(snippet)
+                    
+                    # Aspect 1
                     a1_metrics = scan_aspect1(scan_text)
                     row.update(a1_metrics)
-
-                    # Save Aspect 1 evidence JSON only if we found something
+                    
                     if args.save_json_aspect1 and a1_metrics.get("a1_findings_occurrences", 0) > 0:
                         json_func_dir = json_aspect1_root / function_name
                         json_func_dir.mkdir(parents=True, exist_ok=True)
-                        json_path = json_func_dir / f"{py_file.stem}.aspect1.json"
-
+                        json_path = json_func_dir / f"{safe_name}.aspect1.json"
+                        
                         aspect1_evidence = collect_aspect1_evidence(scan_text)
-
                         payload = {
                             "strategy": strategy,
                             "function_name": function_name,
-                            "test_file": str(py_file.relative_to(PROJECT_ROOT)),
+                            "test_file": nodeid,
                             "aspect": "LLM02_sensitive_information_disclosure",
                             "summary": {k: a1_metrics.get(k) for k in a1_metrics.keys()},
                             **aspect1_evidence,
                         }
-
                         try:
                             json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
                         except Exception as e:
                             row["error"] = (row["error"] + " | " if row["error"] else "") + f"aspect1_json_write_failed: {str(e)[:200]}"
-
-
-                    #Analyse aspect 2    
-                    a2 = scan_aspect2(scan_text, py_file)
+                    
+                    # Aspect 2
+                    a2 = scan_aspect2(scan_text, tmp_file)
                     bandit_raw_json = a2.pop("bandit_raw_json", "")
                     row.update(a2)
-
-                    #Save bandit json
+                    
                     if args.save_json_bandit:
                         json_func_dir = json_bandit_root / function_name
                         json_func_dir.mkdir(parents=True, exist_ok=True)
-                        json_path = json_func_dir / f"{py_file.stem}.bandit.json"
+                        json_path = json_func_dir / f"{safe_name}.bandit.json"
                         try:
                             if bandit_raw_json:
                                 json_path.write_text(bandit_raw_json, encoding="utf-8")
                             else:
-                                # still create a small file explaining why it's empty
                                 json_path.write_text(
                                     json.dumps({"error": row.get("bandit_error", "bandit_no_output")}, indent=2),
-                                    encoding="utf-8"
+                                    encoding="utf-8",
                                 )
                         except Exception as e:
-                            # don't crash the run if writing fails
                             row["error"] = (row["error"] + " | " if row["error"] else "") + f"json_write_failed: {str(e)[:200]}"
                 except Exception as e:
                     row["error"] = str(e)[:300]
                 writer.writerow(row)
 
-    print(f"Scanned {scanned} {'tests' if args.requests_functions else 'files'}. Results written to: {csv_path}")
+    print(f"Scanned {scanned} tests. Results written to: {csv_path}")
 
 
 if __name__ == "__main__":
