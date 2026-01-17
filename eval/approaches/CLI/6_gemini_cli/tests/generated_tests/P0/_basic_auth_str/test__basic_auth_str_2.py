@@ -1,0 +1,12 @@
+
+import pytest
+from requests.auth import _basic_auth_str
+from base64 import b64decode
+
+def test__basic_auth_str_bytes():
+    username = b"user"
+    password = b"password"
+    auth_str = _basic_auth_str(username, password)
+    assert auth_str.startswith("Basic ")
+    decoded = b64decode(auth_str.split(" ")[1]).decode("latin1")
+    assert decoded == "user:password"

@@ -833,9 +833,9 @@ def main():
         scanned = 0
 
         if args.requests_functions:
-            # Prepare a temp workspace for bandit to analyze per-test snippets
-            tmp_root = out_dir / "tmp_snippets"
-            tmp_root.mkdir(parents=True, exist_ok=True)
+            # Use tempfile for automatic cleanup of bandit analysis snippets
+            with tempfile.TemporaryDirectory(prefix="security_eval_") as tmp_dir:
+                tmp_root = Path(tmp_dir)
 
             for nodeid, function_name in targets:
                 scanned += 1
@@ -907,10 +907,10 @@ def main():
                 writer.writerow(row)
 
         else:
-            # Strategy mode: scan individual test functions collected via pytest
-            tmp_root = out_dir / "tmp_snippets"
-            tmp_root.mkdir(parents=True, exist_ok=True)
-            
+            # Use tempfile for automatic cleanup of bandit analysis snippets
+            with tempfile.TemporaryDirectory(prefix="security_eval_") as tmp_dir:
+                tmp_root = Path(tmp_dir)
+                
             for nodeid, function_name, src_file in targets:
                 scanned += 1
                 row = {
