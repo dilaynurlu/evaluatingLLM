@@ -67,8 +67,8 @@ def run_coverage(
     cmd = [
         "coverage", "run",
         "--branch",
+        f"--rcfile={PROJECT_ROOT / '.coveragerc'}",
         f"--data-file={data_file}",
-        f"--source={sut_root}",
         "-m", "pytest", "-v",
     ]
 
@@ -176,6 +176,7 @@ def export_coverage_json(data_file: Path, json_path: Path, timeout: int = 30) ->
 
     cmd = [
         "coverage", "json", "--pretty-print",
+        f"--rcfile={PROJECT_ROOT / '.coveragerc'}",
         f"--data-file={data_file}",
         "-o", str(json_path),
     ]
@@ -219,6 +220,12 @@ def aggregate_metrics(json_path: Path) -> dict:
         }
 
     files = data.get("files", {})
+    
+    # DEBUG: Print which files are being measured
+    print(f"\n=== Coverage measured for {len(files)} file(s) ===")
+    for filepath in files.keys():
+        print(f"  - {filepath}")
+    print("=" * 50)
 
     total_statements = 0
     covered_lines = 0

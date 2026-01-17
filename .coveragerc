@@ -1,0 +1,11 @@
+[run]
+branch = True
+# Don't use 'source' - it measures everything. Use 'include' to measure only specific files.
+include =
+    */requests/src/requests/sessions.py
+    */requests/src/requests/utils.py
+    */requests/src/requests/auth.py
+
+[report]
+# Ensure reports also respect the include filter
+precision = 2
