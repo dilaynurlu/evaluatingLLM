@@ -79,7 +79,7 @@ HARD CONSTRAINTS (non-negotiable):
 5. Quality target:
 - Focus on a single case per generated test file. 
 - The human-written test suite for the selected subset of 10 target functions contains 72 tests in total (≈7 tests per function on average, though the distribution is uneven).
-- When executed in isolation, these human-written tests achieve approximately 58% coverage measured against the entire library.
+- When executed in isolation, these human-written tests achieve approximately 62% coverage measured against the entire library.
 - Human-written tests cover on average approximately 19 executable lines per test.
 - These values are provided as descriptive context only and are not strict per-function or per-test requirements.
 - Use good security hygiene. 
