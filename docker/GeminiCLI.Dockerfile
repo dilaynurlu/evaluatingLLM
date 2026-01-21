@@ -11,7 +11,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && rm -rf /var/lib/apt/lists/*
 
 # Install Gemini CLI
-RUN npm install -g @google/gemini-cli
+RUN npm install -g @google/gemini-cli@0.25.0
 
 # Python tooling + Requests runtime deps
 RUN pip install --no-cache-dir pytest requests

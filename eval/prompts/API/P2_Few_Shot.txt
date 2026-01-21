@@ -41,6 +41,7 @@ Example test cases for the target function:
 =================================================================================================================
 
 First, think through carefully, STEP BY STEP. 
+
 BEFORE writing any code, perform a static analysis of the function {{FUNCTION_NAME}} provided above (INTERNALLY ONLY; do NOT output this analysis):
 - List every conditional branch (if, elif, else) in the code.
 - List every exception that can be raised (raise, try/except).
@@ -104,6 +105,7 @@ Now first think step by step (including the internal static analysis) and then g
 Do NOT print the static analysis. Output must contain only test delimiter blocks.
 Validate the hard constraints internally before you output.
 Follow the provided test cases as example structure.
+Do not limit test scenarios to only those covered by the example tests.
 
 
 
