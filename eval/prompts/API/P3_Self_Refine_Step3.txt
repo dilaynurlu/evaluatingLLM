@@ -14,7 +14,6 @@ Generated critique:
 Requirements:
 - Improve the test cases according to your critique.
 - Output only the improved test-case files.
-- Produce exactly N refined test cases.
 - Test cases must be fully self-contained and executable as its own file.
 - You are not allowed to paste the target function into the test case for self-containtment purposes. 
 - Do NOT output your reasoning or critique.

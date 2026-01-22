@@ -1,52 +1,12 @@
-You are operating inside a Docker container with a mounted repository at /workspace.
-Goal: Generate standalone pytest tests for multiple Requests functions by reading the source code directly from the repository.
 
-Target functions (located across utils.py, auth.py, and sessions.py):
-1. _basic_auth_str
-2. _parse_content_type_header
-3. get_auth_from_url
-4. HTTPDigestAuth
-5. prepend_scheme_if_needed
-6. rebuild_auth
-7. resolve_redirects
-8. select_proxy
-9. should_strip_auth
-10. unquote_header_value
+STRATEGY: P1 
 
 
-CRITICAL RULES:
-- Only create new test files under: eval/tests/generated_tests/P1/
-- Do NOT modify, delete, or rename any existing files anywhere in the repo.
-- Do NOT touch /workspace/venv and do NOT run pip install or any dependency installation.
-- It is allowed to read source files under: requests/src/requests/
-- Tests must be deterministic and must NOT perform real network calls.
+BEFORE writing any test code for F, perform and OUTPUT a short static analysis for F:
+- Repeat this analysis separately for each function F.
+- List every conditional branch (if/elif/else) that matters for behavior.
+- List every exception that can be raised or handled (raise, try/except).
+- List every loop condition / termination behavior.
+- For each item, describe one concrete input/state that would trigger it. Keep this analysis concise (bullet points).
 
-For EACH function F in the list:
-- Locate and read the implementation of F in requests/src/requests/  Inspect direct dependencies used by F as needed.
-- Create the directory (if missing): eval/tests/generated_tests/P1/F/
-- BEFORE writing any test code for F, perform and OUTPUT a short static analysis for F:
-    -List every conditional branch (if/elif/else) that matters for behavior.
-    -List every exception that can be raised or handled (raise, try/except).
-    -List every loop condition / termination behavior.
-    -For each item, describe one concrete input/state that would trigger it. Keep this analysis concise (bullet points).
-- Generate standalone pytest files named exactly: 
-eval/tests/generated_tests/P1/F/test_F_1.py
-…
-eval/tests/generated_tests/P1/F/test_F_10.py
-
-
-Each test file MUST:
-- Import the real function under test (e.g., from requests.utils import F)
-- Define exactly ONE test function (def test_...)
-- Test exactly ONE scenario (avoid multiple independent cases in one file)
-- Avoid real network calls
-- Be runnable independently (no reliance on other generated tests)
-- Prefer real Requests objects created via public APIs; mock only external side effects
-
-Descriptive context (NOT strict requirements):
-- The human-written test suite for the selected subset of the Requests functions contains 72 tests total (≈7 tests per function on average, unevenly distributed).
-- When executed in isolation, these human-written tests achieve approximately 58% coverage measured against the entire library.
-- Human-written tests cover on average ~19 executable lines per test.
-These values are provided for calibration only.
-
-Proceed now. 
+Proceed with generating test cases according to the rules in GEMINI.md 

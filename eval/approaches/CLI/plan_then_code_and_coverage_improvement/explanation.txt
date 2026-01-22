@@ -1,0 +1,12 @@
+For this approach:
+
+We use the gemini.md file and the individual prompts.
+
+For the first batch of the tests, we enforce a static analysis in P1-P3 and generate the tests. 
+The model also refined the failing tests.
+The coverage results for this initial batch are in the first line of each corresponding coverage result csv file. 
+
+Later in the cli we prompt the model explicitly "The human written test suite measures 62% coverage, try to perform similarly."
+Then the model does a second round of refinement on the inital batch of tests, modifying them. 
+The coverage results after this refinement are in the second line of each corresponding coverage result csv file. 
+
