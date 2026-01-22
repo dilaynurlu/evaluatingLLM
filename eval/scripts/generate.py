@@ -12,7 +12,7 @@ from google import genai  # recommended after 2025
 # This assumes: eval/scripts/generate_tests.py
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-PROMPTS_DIR = PROJECT_ROOT / "eval" / "prompts"
+PROMPTS_DIR = PROJECT_ROOT / "eval" / "prompts" / "API"
 FUNCTIONS_JSON = PROJECT_ROOT / "eval" / "functions" / "functions_to_test.json"
 GENERATED_BASE = PROJECT_ROOT / "eval" / "tests" / "generated_tests"
 
@@ -131,6 +131,15 @@ def call_gemini(client, model_name: str, prompt: str) -> str:
         print(f"  -> output tokens: {response.usage_metadata.candidates_token_count}")
     else:
         print("  -> token usage metadata not available")
+
+    # Check for empty or None response
+    if not response.text:
+        # Check if there's a safety/block reason
+        if hasattr(response, 'prompt_feedback'):
+            print(f"  -> Response blocked or empty. Feedback: {response.prompt_feedback}")
+        if hasattr(response, 'candidates') and response.candidates:
+            print(f"  -> Candidate finish reason: {response.candidates[0].finish_reason}")
+        raise ValueError("Model returned empty response. Check safety filters or prompt content.")
     
     return response.text
 

@@ -3,11 +3,13 @@
 """
 Evaluate syntactic, execution and assertion correctness of generated test files.
 
+Outputs one CSV row per collected test case (including parametrized tests).
+
 - Checks syntax (compile) of a single test file.
 - Counts 'assert' statements using the AST.
 - Runs pytest on the single file and writes JUnit XML to a temporary file.
-- Parses JUnit XML to classify passes, assertion failures, and execution/import/runtime errors.
-- Returns a structured result dict and can write as row to CSV.
+- Parses JUnit XML per-testcase to classify passes, assertion failures, and execution/import/runtime errors.
+- Returns one row per collected test case with all correctness metrics.
 - Cleans up temporary files.
 """
 
@@ -110,9 +112,9 @@ def run_pytest_junit(path: Path, timeout: int = 30) -> tuple[Path, str]:
     return xml_out, out
 
 
-def parse_junit(xml_path: Path) -> dict:
+def parse_junit_cases(xml_path: Path) -> list[dict]:
     """
-    Parse pytest-produced JUnit XML and return aggregated results and messages.
+    Parse pytest-produced JUnit XML and return a list of testcase-level results.
 
     Decision criteria for execution correctness:
 
@@ -125,90 +127,69 @@ def parse_junit(xml_path: Path) -> dict:
 
       - <error> elements are treated as execution errors.
 
-      - If the XML file is missing or unparsable, a helpful message is appended to error_messages.
-
-    Returns
-    -------
-    dict
-        {
-            "passes": int,
-            "failures": int,
-            "errors": int,
-            "skips": int,
-            "failure_messages": [str,...],
-            "error_messages": [str,...]
-        }
+    Each element represents a collected test (including parametrized cases) with:
+      - testcase: str (pytest-reported name, e.g. test_foo[param1])
+      - status: str in {pass, failure, error, skip}
+      - message: str (normalized first message text)
     """
-    results = {
-        "passes": 0,
-        "failures": 0,
-        "errors": 0,
-        "skips": 0,
-        "failure_messages": [],
-        "error_messages": []
-    }
+    cases: list[dict] = []
 
-    
     if not xml_path.exists():
-        results["error_messages"].append(f"JUnit XML not found: {xml_path}")
-        return results
+        return cases
 
     try:
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-    except Exception as e:
-        # Parsing error
-        results["error_messages"].append(f"Failed to parse JUnit XML: {e}")
-        return results
+        root = ET.parse(xml_path).getroot()
+    except Exception:
+        return cases
 
-    # Iterate all testcase elements and classify their outcome
     for testcase in root.iter("testcase"):
+        name = testcase.get("name") or ""
+        classname = testcase.get("classname") or ""
         failure_elem = testcase.find("failure")
         error_elem = testcase.find("error")
         skipped_elem = testcase.find("skipped")
 
-        if failure_elem is not None:
-            # Extract message or text for classification
-            msg = failure_elem.get("message") or (failure_elem.text or "")
-            msg_norm = (msg or "").strip() #Ensure msg is never None before calling strip()
+        status = "pass"
+        message = ""
 
-            # if message mentions AssertionError or contains an 'assert' snippet -> failure. Otherwise --> error.
+        if failure_elem is not None:
+            msg = failure_elem.get("message") or (failure_elem.text or "")
+            msg_norm = (msg or "").strip()
+            # Classify assertion vs execution error based on message content
             is_assertion = False
             if "AssertionError" in msg_norm:
                 is_assertion = True
             else:
-                # Check first line for typical assert traces
                 first_line = msg_norm.splitlines()[0] if msg_norm else ""
                 if first_line.startswith("assert ") or "assert " in first_line:
                     is_assertion = True
 
-            if is_assertion:
-                results["failures"] += 1
-                results["failure_messages"].append(msg_norm)
-            else:
-                results["errors"] += 1
-                results["error_messages"].append(msg_norm)
+            status = "failure" if is_assertion else "error"
+            message = msg_norm
 
         elif error_elem is not None:
-            # Explicit <error> element -> execution/internal error
-            msg = error_elem.get("message") or (error_elem.text or "")
-            results["errors"] += 1
-            results["error_messages"].append((msg or "").strip())
+            status = "error"
+            message = ((error_elem.get("message") or error_elem.text or "") or "").strip()
 
         elif skipped_elem is not None:
-            results["skips"] += 1
-        else:
-            # No failure/error child -> test passed
-            results["passes"] += 1
+            status = "skip"
+            message = ((skipped_elem.get("message") or skipped_elem.text or "") or "").strip()
 
-    return results
+        cases.append({
+            "testcase": name or classname,
+            "status": status,
+            "message": message,
+        })
+
+        
+    return cases
 
 
-def evaluate_correctness(path: Path) -> dict:
+def evaluate_cases(path: Path) -> list[dict]:
     """
-    Evaluate a single test file for syntactic, execution and assertion correctness.
+    Run pytest on a single test file and return per-testcase rows.
 
-    Steps:
+        Steps:
       - Check syntax using syntactic_ok()
       - If syntax fails -> skip execution and assertion correctness 
 
@@ -218,70 +199,9 @@ def evaluate_correctness(path: Path) -> dict:
         - Parse JUnit XML (parse_junit)
         - Remove temporary XML file (cleanup)
         - Decide execution_ok (no execution errors) and assertion_ok (asserts present and no failures/errors)
-
-    Parameters
-    ----------
-    path : pathlib.Path
-        Path to the test file to evaluate.
-
-    Returns
-    -------
-    dict
-        Summary containing:
-          - file: str
-          - syntactic_ok: int (1/0)
-          - execution_ok: int (1/0)
-          - assertion_ok: int (1/0)
-          - num_asserts: int
-          - passes, failures, errors, skips: int
-          - pytest_stdout_tail: str (last lines of pytest output for diagnostics)
     """
-    
-    syntax = syntactic_ok(path)
-    if not syntax:
-        return {
-            "file": str(path),
-            "syntactic_ok": int(syntax),
-            "execution_ok": 0,
-            "assertion_ok": 0,
-            "num_asserts": 0,
-            "passes": 0,
-            "failures": 0,
-            "errors": 0,
-            "skips": 0,
-            "error_message": "",
-            "pytest_stdout_tail": "skipped due to syntax error",
-        }
-
-    n_asserts = count_asserts(path)
-
-    xml, stdout = run_pytest_junit(path)
-    try:
-        junit = parse_junit(xml)
-    finally:
-        try:
-            xml.unlink(missing_ok=True)
-        except Exception:
-            pass
-
-    exec_ok = (junit.get("errors", 0) == 0)
-
-    # assertion_ok only true when asserts exist and there are no failures or execution errors
-    if n_asserts == 0:
-        assert_ok = False
-    elif junit.get("failures", 0) > 0:
-        assert_ok = False
-    elif junit.get("errors", 0) > 0:
-        assert_ok = False
-        #TODO: we could set n_asserts to 0 here to indicate that because of the execution error we skipped the assertion check
-    else:
-        assert_ok = True
-
-    # Build a concise single-line error_message for CSV:
-    # - Prefer structured messages from parse_junit()
-    # - For assertion failures include failure_messages; for execution errors include error_messages
-    # - Only include a message when failures/errors exist; otherwise leave empty
     def _sanitize(msg: str, max_len: int = 500) -> str:
+        """Sanitize message for CSV: flatten newlines and truncate."""
         if not msg:
             return ""
         # replace newlines and excessive whitespace with single space
@@ -290,37 +210,73 @@ def evaluate_correctness(path: Path) -> dict:
             return single[: max_len - 3] + "..."
         return single
 
-    error_message = ""
-    if junit.get("errors", 0) > 0:
-        msgs = junit.get("error_messages", []) or []
-        if msgs:
-            error_message = _sanitize("; ".join(msgs))
-        else:
-            # fallback to last few lines of stdout (if any)
-            error_message = _sanitize("\n".join((stdout or "").splitlines()[-10:]))
-    elif junit.get("failures", 0) > 0:
-        msgs = junit.get("failure_messages", []) or []
-        if msgs:
-            error_message = _sanitize("; ".join(msgs))
-        else:
-            error_message = _sanitize("\n".join((stdout or "").splitlines()[-10:]))
-    else:
-        # no failures/errors -> keep empty to avoid including passing stdout in CSV
-        error_message = ""
+    if not syntactic_ok(path):
+        # Return a single row with all metrics zeroed out for syntax errors
+        return [{
+            "file": str(path),
+            "testcase": "",
+            "syntactic_ok": 0,
+            "execution_ok": 0,
+            "assertion_ok": 0,
+            "num_asserts": 0,
+            "passes": 0,
+            "failures": 0,
+            "errors": 0,
+            "skips": 0,
+            "error_message": "Syntax error",
+        }]
 
-    return {
-        "file": str(path),
-        "syntactic_ok": int(syntax),
-        "execution_ok": int(exec_ok),
-        "assertion_ok": int(assert_ok),
-        "num_asserts": n_asserts,
-        "passes": junit.get("passes", 0),
-        "failures": junit.get("failures", 0),
-        "errors": junit.get("errors", 0),
-        "skips": junit.get("skips", 0),
-        "error_message": error_message,
-        "pytest_stdout_tail": "\n".join((stdout or "").splitlines()[-30:]),
-    }
+    xml, _stdout = run_pytest_junit(path)
+    try:
+        cases = parse_junit_cases(xml)
+    finally:
+        try:
+            xml.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    # Augment each case with per-case metrics aligned with legacy headers
+    n_asserts = count_asserts(path)
+    synt_ok = int(syntactic_ok(path))
+
+    rows: list[dict] = []
+    for c in cases:
+        status = c.get("status", "").lower()
+        message = c.get("message", "") or ""
+
+        passes = 1 if status == "pass" else 0
+        failures = 1 if status == "failure" else 0
+        errors = 1 if status == "error" else 0
+        skips = 1 if status == "skip" else 0
+
+        # Hierarchical checks: syntactic → execution → assertion
+        # execution_ok: 0 if testcase has execution error, 1 otherwise
+        exec_ok = 0 if status == "error" else 1
+        
+        # assertion_ok: only checked if execution_ok = 1
+        # Requires: passing test AND file has at least one assert
+        if status == "error":
+            asrt_ok = 0
+        elif status == "pass" and n_asserts > 0:
+            asrt_ok = 1
+        else:
+            asrt_ok = 0
+
+        rows.append({
+            "file": str(path),
+            "testcase": c.get("testcase", ""),
+            "syntactic_ok": synt_ok,
+            "execution_ok": exec_ok,
+            "assertion_ok": asrt_ok,
+            "num_asserts": n_asserts,
+            "passes": passes,
+            "failures": failures,
+            "errors": errors,
+            "skips": skips,
+            "error_message": _sanitize(message) if (failures == 1 or errors == 1) else "",
+        })
+
+    return rows
 
 
 def find_test_files(target: Path) -> list[Path]:
@@ -350,19 +306,16 @@ def find_test_files(target: Path) -> list[Path]:
 
 def main():
     """
-
-    Parses arguments, discovers test files, runs evaluate_correctness on each file and prints
+    Parses arguments, discovers test files, runs per-testcase evaluation and prints
     a human-readable summary. 
     
-    Optionally writes results to a CSV file including all scores and the error message.
-    In one line of the CSV, we have results for one test case. 
-    (Each test case is saved in a separate .py file for clear observation.)
-    The script can be called for a single test file or an entire directory.
+    Optionally writes results to a CSV file with one row per collected test case.
+    Supports parametrized tests by expanding them into individual rows.
 
     Criteria:
-        - syntactic_ok: 1 if the file compiles, 0 otherwise. If 0, we skip execution and assertion checks.
-        - exectution_ok: 1 if the test runs without execution errors, 0 otherwise.
-        - assertion_ok: 1 if there is at least one assert and no execution failures and no assertion failures, 0 otherwise.
+        - syntactic_ok: 1 if the file compiles, 0 otherwise.
+        - execution_ok: 1 if the test runs without execution errors, 0 otherwise.
+        - assertion_ok: 1 if the test passes and the file has at least one assert, 0 otherwise.
 
     
     --strategy  : required, one of P0,P1,P2,P3 (folder under eval/tests/generated_tests)
@@ -373,10 +326,10 @@ def main():
 
     Examples:
       # Entire strategy
-      python eval/scripts/evaluate_correctness.py --strategy P0 --csv
+      python eval/scripts/evaluate_strategy_correctness.py --strategy P0 --csv
 
       # Single subject under a strategy
-      python eval/scripts/evaluate_correctness.py --strategy P0 --tests get_auth_from_url --csv
+      python eval/scripts/evaluate_strategy_correctness.py --strategy P0 --tests get_auth_from_url --csv
     """
 
     parser = argparse.ArgumentParser(
@@ -413,7 +366,6 @@ def main():
 
     csv_subdir = CSV_BASE / strategy
 
-
     if not target.exists():
         print(f"No test files found at constructed path: {target}")
         return
@@ -423,11 +375,12 @@ def main():
         print(f"No test files found under {target}")
         return
 
-    # Prepare CSV writer if requested
+    # Prepare CSV writer
     csv_writer = None
     csv_file = None
     fieldnames = [
         "file",
+        "testcase",
         "syntactic_ok",
         "execution_ok",
         "assertion_ok",
@@ -437,7 +390,7 @@ def main():
         "errors",
         "skips",
         "error_message",
-    ]   
+    ]
 
     if args.csv:
         csv_subdir.mkdir(parents=True, exist_ok=True)
@@ -445,30 +398,20 @@ def main():
         csv_file = open(csv_path, "w", newline="", encoding="utf-8")
         csv_writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         csv_writer.writeheader()
-        
 
     # Print table header
-    print(f"{'file':60}  syn  exec  asrt  asserts  pass  fail  err  skip")
+    print(f"{'file':40}  {'testcase':40}  syn  exec  asrt  asserts  pass  fail  err  skip")
 
     for f in files:
-        result = evaluate_correctness(f)
-
-        # Print human-readable row
-        print(
-            f"{Path(result['file']).name:60}  "
-            f"{result['syntactic_ok']:3d}  "
-            f"{result['execution_ok']:4d}  "
-            f"{result['assertion_ok']:4d}  "
-            f"{result['num_asserts']:7d}  "
-            f"{result['passes']:4d}  "
-            f"{result['failures']:4d}  "
-            f"{result['errors']:4d}  "
-            f"{result['skips']:4d}"
-        )
-
-        # Write CSV row if requested
-        if csv_writer is not None:
-            csv_writer.writerow({k: result.get(k, "") for k in fieldnames})
+        rows = evaluate_cases(f)
+        for r in rows:
+            print(
+                f"{Path(r['file']).name:40}  {r['testcase'][:40]:40}  "
+                f"{int(r['syntactic_ok']):3d}  {int(r['execution_ok']):4d}  {int(r['assertion_ok']):4d}  "
+                f"{int(r['num_asserts']):7d}  {int(r['passes']):4d}  {int(r['failures']):4d}  {int(r['errors']):4d}  {int(r['skips']):4d}"
+            )
+            if csv_writer is not None:
+                csv_writer.writerow({k: r.get(k, "") for k in fieldnames})
 
     if csv_file is not None:
         csv_file.close()
