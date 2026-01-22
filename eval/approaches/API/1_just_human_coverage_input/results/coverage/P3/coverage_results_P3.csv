@@ -1,3 +1,0 @@
-label,tests_run,total_statements,covered_lines,percent_line_coverage,total_branches,covered_branches,percent_branch_coverage,percent_total_coverage,error
-P3,65,2200,1135,51.590909090909086,780,233,29.871794871794872,45.90604026845638,
-P3,65,921,498,54.071661237785015,358,126,35.19553072625698,48.78811571540266,

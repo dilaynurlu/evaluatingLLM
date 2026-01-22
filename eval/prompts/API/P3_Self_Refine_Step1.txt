@@ -1,7 +1,7 @@
 You are given a target function from a Python library about HTTP requests.
 Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
 The Python version is 3.11.
-The pytest version is 8.4.2
+The pytest version is 8.4.2.
 
 =================================================================================================================
 Target function name:
@@ -33,15 +33,6 @@ Setup notes for successful execution:
 
 =================================================================================================================
 
-First, think through carefully, STEP BY STEP. 
-BEFORE writing any code, perform a static analysis of the function {{FUNCTION_NAME}} provided above (INTERNALLY ONLY; do NOT output this analysis):
-- List every conditional branch (if, elif, else) in the code.
-- List every exception that can be raised (raise, try/except).
-- List every loop condition.
-- For each item in your list, describe a specific input that would trigger that path.
-- Then, generate a test suite that covers these scenarios (subject to the one-test-per-file rule below).
-
-
 For generating the tests, follow these rules:
 
 HARD CONSTRAINTS (non-negotiable):
@@ -59,8 +50,7 @@ HARD CONSTRAINTS (non-negotiable):
 - Do NOT combine multiple cases in one test.
 - No "Case 1/Case 2/..." sections.
 - No multiple input variations in one test.
-- No multiple independent asserts for different behaviors.
-(Multiple asserts are allowed ONLY if they all validate the SAME single scenario, e.g., value equality + type.)
+- No multiple independent asserts for different behaviors. (Multiple asserts are allowed ONLY if they all validate the SAME single scenario, e.g., value equality + type.)
 
 3. Self-containment rules: 
 - The test file MUST be executable as-is by pytest.
@@ -95,7 +85,6 @@ HARD CONSTRAINTS (non-negotiable):
 - These values are provided as descriptive context only and are not strict per-function or per-test requirements.
 - Use good security hygiene. 
 
-
-Now first think step by step (including the internal static analysis) and then generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}.
-Do NOT print the static analysis. Output must contain only test delimiter blocks.
+Now generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}. 
 Validate the hard constraints internally before you output. 
+Output must contain only test delimiter blocks.

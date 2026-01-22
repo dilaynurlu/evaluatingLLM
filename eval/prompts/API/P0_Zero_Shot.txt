@@ -56,6 +56,7 @@ HARD CONSTRAINTS (non-negotiable):
 - The test file MUST be executable as-is by pytest.
 - Do not rely on shared state between test cases.
 - You MUST NOT paste or reimplement {{FUNCTION_NAME}} in the test file.
+- You MUST import {{FUNCTION_NAME}} from {{FUNCTION_MODULE}} and call it.
 - Include all necessary imports correctly to avoid collection failures.
 - Dependency/helper functions are provided for context only; do NOT write tests for them.
 - For all generated tests, {{FUNCTION_NAME}} is the unit under test.
@@ -86,4 +87,5 @@ HARD CONSTRAINTS (non-negotiable):
 
 Now generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}. 
 Validate the hard constraints internally before you output. 
+Output must contain only test delimiter blocks.
 

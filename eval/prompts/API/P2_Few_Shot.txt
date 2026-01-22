@@ -4,8 +4,8 @@ Additionally, you are also given several examples of test cases for the target f
 Your task is to use pytest and generate complete, executable and unique test cases for this target function. 
 Use the given example test cases as guidance for structure, style, completeness, and formatting.
 
-The Python version is 3.11
-The pytest version is 8.4.2
+The Python version is 3.11.
+The pytest version is 8.4.2.
 
 =================================================================================================================
 Target function name:
@@ -40,15 +40,6 @@ Example test cases for the target function:
 
 =================================================================================================================
 
-First, think through carefully, STEP BY STEP. 
-
-BEFORE writing any code, perform a static analysis of the function {{FUNCTION_NAME}} provided above (INTERNALLY ONLY; do NOT output this analysis):
-- List every conditional branch (if, elif, else) in the code.
-- List every exception that can be raised (raise, try/except).
-- List every loop condition.
-- For each item in your list, describe a specific input that would trigger that path.
-- Then, generate a test suite that covers these scenarios (subject to the one-test-per-file rule below).
-
 
 For generating the tests, follow these rules:
 
@@ -73,6 +64,7 @@ HARD CONSTRAINTS (non-negotiable):
 - The test file MUST be executable as-is by pytest.
 - Do not rely on shared state between test cases.
 - You MUST NOT paste or reimplement {{FUNCTION_NAME}} in the test file.
+- You MUST import {{FUNCTION_NAME}} from {{FUNCTION_MODULE}} and call it.
 - Include all necessary imports correctly to avoid collection failures.
 - Dependency/helper functions are provided for context only; do NOT write tests for them.
 - For all generated tests, {{FUNCTION_NAME}} is the unit under test.
@@ -101,11 +93,13 @@ HARD CONSTRAINTS (non-negotiable):
 - These values are provided as descriptive context only and are not strict per-function or per-test requirements.
 - Use good security hygiene. 
 
-Now first think step by step (including the internal static analysis) and then generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}.
-Do NOT print the static analysis. Output must contain only test delimiter blocks.
-Validate the hard constraints internally before you output.
+Now generate multiple UNIQUE test files (each file = exactly one test function, exactly one scenario) for {{FUNCTION_NAME}}. 
 Follow the provided test cases as example structure.
 Do not limit test scenarios to only those covered by the example tests.
+Validate the hard constraints internally before you output.
+Output must contain only test delimiter blocks.
+
+
 
 
 
