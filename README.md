@@ -13,8 +13,8 @@ local `requests` source code.
 * Measuring the quality of generated tests regarding **security** aspects.
 * Comparing LLM-generated tests against existing human-written tests.
 
-> **Important design choice**:\
-> The `requests` library itself is not vendored in this repository.\
+> **Important design choice**:
+> The `requests` library itself is not vendored in this repository.
 > You must provide a local clone and install it in editable mode.
 
 ---
@@ -52,6 +52,7 @@ Output should point to:
     .../evaluatingLLM/venv/bin/python
 
 <br>
+
 
 
 ## 3. Install required Python packages and run Jupyter Notebooks
@@ -125,6 +126,7 @@ For coverage to measure your local copy of `requests`, make sure the local Reque
 
 <br>
 
+
 ### Not recommended (PyPI install)
 
 ``` bash
@@ -158,7 +160,8 @@ source ~/.zshrc
 
 
 
-<br> 
+<br>
+
 
 ## 6. Docker Setup (macOS)
 
@@ -189,6 +192,7 @@ Make the Docker wrapper script executable:
 ```bash
 chmod +x eval/scripts/run_in_docker.sh
 ```
+
 
 
 
@@ -229,7 +233,6 @@ To enable network access explicitly:
 - The container installs the PyPI requests module for dependencies. The wrapper script exports the PYTHONPATH to point to your local requests clone.
 - Docker is the recommended execution mode for this project.
 
-
 ------------------------------------------------------------------------
 <br>
 <br>
@@ -243,15 +246,15 @@ To enable network access explicitly:
     │   └── tests/
     │   └── (...)
     ├── docker/
-    │   └── Dockerfile
+    │   ├── Dockerfile                              # Evaluation image
+    │   └── GeminiCLI.Dockerfile                    # Interactive CLI image
     ├── eval/
     │   └── functions/
     │       └── functions_to_test.json              #JSON list of all chosen functions to be tested from request library 
     │   └── prompts/
-    │       └── P0_Zero_Shot.txt
-    │       └── P1_Zero_CoT.txt
-    │       └── ...
-    │   └── results/                                 # CSV outputs (correctness & coverage)
+    │       ├── API/                                # Prompts for generate.py
+    │       └── CLI/                                # Prompts for Gemini CLI
+    │   └── results/                                # CSV outputs (correctness & coverage)
     │       └── correctness/  
     │           └── P0/
     │           └── P1/
@@ -263,7 +266,8 @@ To enable network access explicitly:
     │       └── evaluate_strategy_coverage.py
     │       └── evaluate_strategy_security.py
     │       └── generate.py
-    │   │   └── run_in_docker.sh
+    │       ├── run_in_docker.sh
+    │       └── run_gemini_cli.sh
     │   └── tests/
     │       └── generated_tests/
     │           └── P0/
@@ -322,13 +326,57 @@ python eval/scripts/generate.py --prompt-strategy P1  --function-name parse_head
 <br>
 <br>
 
+# Interactive Test Generation (Gemini CLI)
+
+#### Purpose
+- Run an **interactive agent** session where the LLM can autonomously read source code, navigate the repository, and generate test files.
+- Ideal for complex strategies (like P3) or when you want the agent to explore the codebase before writing tests.
+- Runs inside a secure Docker container (`evaluatingllm-cli-2`) with the Gemini CLI tool installed.
+
+#### Prerequisites
+- Docker Desktop installed and running.
+- `GEMINI_API_KEY` exported in your environment.
+
+#### 1. Build the CLI Docker Image
+This is a separate image from the evaluation image. Build it once:
+
+```bash
+docker build -t evaluatingllm-cli-2 -f docker/GeminiCLI.Dockerfile .
+```
+
+#### 2. Start the CLI Session
+Run the provided wrapper script:
+
+```bash
+./eval/scripts/run_gemini_cli.sh
+```
+
+This will:
+- Mount your current repository to `/workspace`.
+- Mount a dummy volume over `/workspace/venv` to protect your local environment.
+- Drop you into an interactive `gemini` shell session.
+
+#### 3. Provide a Strategy Prompt
+Once the CLI starts, it waits for input. You should provide one of the pre-defined strategy prompts located in `eval/prompts/CLI/`.
+
+**Workflow:**
+1. Open a prompt file locally (e.g., `eval/prompts/CLI/CLI_P0.txt`).
+2. Copy the entire content.
+3. Paste it into the running Gemini CLI session.
+4. The agent will parse the instructions and begin the test generation task for the target functions.
+
+------------------------------------------------------------------------
+
+<br>
+<br>
+
 # Using the Evaluation Scripts
 
 ## Correctness evaluation
 
 #### Purpose
 - Check generated test files for syntax, count asserts, run pytest on each file. 
-- Classify results (pass / assertion failure / execution error). 
+- Classify results (pass / assertion failure / execution error).
 - Optionally write a CSV summary.
 - Human-readable table printed to stdout.
 
@@ -364,7 +412,7 @@ python eval/scripts/evaluate_strategy_correctness.py --strategy P0 --tests get_a
 - _strategy_ (required unless --requests) : e.g. P0, P1, ...
 - _tests_ (optional) : tests folder under the strategy to run (e.g. get_auth_from_url)
 - _requests-all_ (flag) : runs all the tests under requests repo at <project_root>/requests/tests
-- _reqests-functions_ (flag) : runs only the example reuqests library test cases that were listed on the functions_to_test.json. For fair coverage comparison between generated LLM tests and official requests tests.     
+- _requests-functions_ (flag) : runs only the example reuqests library test cases that were listed on the functions_to_test.json. For fair coverage comparison between generated LLM tests and official requests tests.     
 - _sut-root_ (optional) : path to SUT root, default requests/src/requests
 - _label_ (optional): friendly label used in CSV/JSON filenames
 - _csv_ (flag) : write CSV to eval/results/coverage/<strategy_or_requests>/coverage_results_<label>.csv
@@ -380,7 +428,7 @@ python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --tests _basic
 python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --csv 
 
 #Coverage for all requests tests, some are not relevant for the project
-python ./eval/scripts/evaluate_strategy_coverage.py --requests --csv
+python ./eval/scripts/evaluate_strategy_coverage.py --requests-all --csv
 
 #Coverage for all relevant requests functions
 python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --csv --json-dir
@@ -395,18 +443,29 @@ python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --name 
 - Use editable install (`pip install -e /path/to/requests`) or set PYTHONPATH so the source under test is the importable `requests` package.
 - Use `--json-dir` when you want the JSON and .coverage artifacts for deeper debugging or to build an HTML coverage report later.
 
-
 <br>
 
 
 
 ## Security evaluation
 
+**Note:** No automated script is provided for this step.
+
+#### Process
+1.  **Tool:** [Snyk CLI](https://docs.snyk.io/snyk-cli) (specifically `snyk code` for SAST).
+2.  **Execution:** Run Snyk against the generated test files and output to JSON.
+    ```bash
+    snyk code test eval/tests/generated_tests/<STRATEGY>/<FUNCTION>/test_file.py --json > output.json
+    ```
+3.  **Analysis:**
+    - The JSON results were converted to CSV format (via an ad-hoc script, not included).
+    - Results are analyzed and visualized using the `security_analysis.ipynb` notebook in the project root.
+
 
 ------------------------------------------------------------------------
 
 <br>
-<br> 
+<br>
 
 ## Notes
 
