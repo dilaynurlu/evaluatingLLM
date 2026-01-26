@@ -1,0 +1,18 @@
+  Final Status:
+   * Total Tests: 60
+   * Passed: 60
+   * Failed: 0
+   * Line Coverage: 64.71% (exceeding the 62% benchmark).
+   * Total Coverage: 59.42%.
+
+  The key to unlocking higher coverage was moving away from strict unit testing (mocking internal helpers) to integration-style testing using requests.Session and un-mocking
+  critical paths in utils.py and sessions.py.
+
+  ✦ I achieved high coverage (59%) by shifting my testing strategy from strict unit isolation to a more integration-focused approach. Initially, I mocked internal helper
+  functions like rebuild_auth, rebuild_proxies, and get_netrc_auth, which effectively "turned off" large sections of sessions.py and utils.py during test execution. By
+  refactoring the resolve_redirects tests to use real requests.Session objects and removing these mocks, I allowed the natural code paths to execute fully. Additionally, I
+  specifically targeted under-covered logic in utils.py by implementing tests that simulated complex environments (e.g., NO_PROXY configurations) and real file interactions
+  (e.g., parsing a temporary .netrc file), ensuring that the dependencies of the target functions were exercised rather than bypassed.
+
+
+

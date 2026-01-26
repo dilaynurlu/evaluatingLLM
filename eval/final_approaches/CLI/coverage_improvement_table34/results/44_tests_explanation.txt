@@ -1,0 +1,11 @@
+✦ I determined the initial count of 44 tests to be sufficient by employing a complexity-driven allocation strategy, ensuring that high-risk areas received the most attention
+  without inflating the suite with redundant checks. I categorized the target functions into three tiers: complex state managers (like HTTPDigestAuth and resolve_redirects),
+  which required extensive testing of their internal state machines, threading logic, and multi-step protocols; decision logic (like should_strip_auth), where I mapped tests 1:1
+  against every boolean condition and security boundary; and parsing utilities, where I focused purely on input equivalence classes (e.g., valid vs. invalid strings, edge-case
+  encodings). This allowed me to "hit" every unique code path I identified in the source analysis with a dedicated test case.
+
+  Furthermore, my coverage strategy was deliberately designed to be leaner than the human-written suite by avoiding overlapping scenarios. Where a human might write three tests
+  that fundamentally check the same success path with slightly different string values, I implemented a single, representative test for that path. I specifically targeted
+  "decision points"—such as if/else branches and exception handlers—and protocol-mandated behaviors (like 303 redirects forcing a GET method). By validating these orthogonal
+  scenarios, I aimed to achieve maximum logical coverage with a minimum number of high-quality, focused test files, calibrating my effort to the functional density of the code
+  rather than an arbitrary test count.

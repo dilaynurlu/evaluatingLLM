@@ -1,0 +1,12 @@
+
+STRATEGY: P1 
+
+
+BEFORE writing any test code for F, perform and OUTPUT a short static analysis for F:
+- Repeat this analysis separately for each function F.
+- List every conditional branch (if/elif/else) that matters for behavior.
+- List every exception that can be raised or handled (raise, try/except).
+- List every loop condition / termination behavior.
+- For each item, describe one concrete input/state that would trigger it. Keep this analysis concise (bullet points).
+
+Proceed with generating test cases according to the rules in GEMINI.md 

@@ -1,0 +1,4 @@
+This is the general prompt folder. Prompts not specifically tied to a strategy. 
+
+The generate.py picks prompts from this folder.
+If you want to try a specific strategy, move the specific prompts you want into the folder. 

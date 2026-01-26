@@ -1,0 +1,12 @@
+You generated the test cases shown below.
+Provide a critique identifying ways the test cases could be improved regarding coverage and good security practices.
+
+Do NOT rewrite the tests here.
+Output only your critique.
+
+=================================================================================================================
+Generated test cases: 
+{{GENERATED_TEST_CASES_FROM_STEP_1}}
+
+=================================================================================================================
+

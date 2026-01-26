@@ -1,0 +1,15 @@
+Depending on this session, can you give me a short paragraph about why you strrugle to each a high coverage as the human written test suite?
+
+✦ I struggled to reach the same coverage (62%) as the human-written test suite primarily because I initially treated the target functions as isolated units, heavily mocking their
+  dependencies (rebuild_auth, rebuild_proxies, get_netrc_auth) to ensure test purity. However, since the coverage benchmark includes the code within requests/sessions.py and
+  requests/utils.py where these dependencies reside, my mocking strategy actively prevented those lines from executing. The human suite likely employs integration-style tests
+  (e.g., using full requests.Session objects with real environment configurations) which naturally exercise these helper functions and their deep logic chains (like proxy
+  resolution and netrc parsing) as a side effect of testing the main targets. My subsequent refactoring to remove mocks and use real objects significantly closed this gap,
+  proving that "purity" came at the cost of reachable coverage in this specific benchmarking context.
+
+  ✦ Despite significantly improving the suite to 58 tests and achieving ~54% line coverage, the remaining gap to the 62% benchmark stems from unreachable integration paths that are
+  likely exercised by the human suite's broader scope. The human tests for functions like resolve_redirects are often part of larger Session.request calls that implicitly trigger
+  extensive setup and teardown logic within sessions.py (such as merge_hooks, prepare_request, and full adapter interactions) and utils.py (broader environment parsing). Since I
+  am restricted to testing specific functions in isolation—even with requests.Session objects—my tests skip these peripheral code paths that surround the target functions but are
+  technically counted in the file-level coverage metrics. To reach 62%, I would need to write tests that effectively simulate full request lifecycles rather than just targeting
+  the specific logic of the assigned functions.

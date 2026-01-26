@@ -1,0 +1,22 @@
+
+STRATEGY: P3 
+
+After generating the initial test files for each function according to GEMINI.md, perform the following self refinement loop:
+
+Self Refine Loop:
+  1. RUN: 
+    Run pytest for each folder and capture failures. 
+    Also measure line and branch coverage against the files auth.py, sessions.py and utils.py in requests. 
+    Do not attempt to write coverage HTML; terminal report is enough.
+
+  2. CRITIQUE: 
+    Then, provide a critique identifying concrete improvements to increase coverage and robustness and to follow good security practices. 
+    The critique must be specific (e.g., “your Response.headers is a plain dict causing case-sensitivity; use CaseInsensitiveDict or mutate existing headers mapping”).
+  
+  3. REFINE: 
+    Update ONLY the generated tests under eval/tests/generated_tests/P3/F/ based on your critique. 
+    Keep the “one file = one test function = one scenario” rule.
+
+
+Now proceed to generate the initial test cases according to the rules in GEMINI.md.
+Do not perform the Self Refine Loop more than 3 times. Do not loop forever. 
