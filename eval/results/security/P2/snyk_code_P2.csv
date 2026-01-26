@@ -1,0 +1,4 @@
+Rule ID,Severity,Text,CWE Codes,File Path,Vulnerability Line
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,_basic_auth_str/test_P2__basic_auth_str_1.py,5
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,_basic_auth_str/test_P2__basic_auth_str_3.py,7
+python/NoHardcodedPasswords/test,note,Use of Hardcoded Passwords,"CWE-798, CWE-259",_basic_auth_str/test_P2__basic_auth_str_1.py,6

@@ -1,0 +1,11 @@
+Rule ID,Severity,Text,CWE Codes,File Path,Vulnerability Line
+python/InsecureHash/test,note,Use of Password Hash With Insufficient Computational Effort,CWE-916,HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py,61
+python/InsecureHash/test,note,Use of Password Hash With Insufficient Computational Effort,CWE-916,HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py,62
+python/InsecureHash/test,note,Use of Password Hash With Insufficient Computational Effort,CWE-916,HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py,59
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,HTTPDigestAuth/test_P3_HTTPDigestAuth_2.py,14
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py,16
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py,15
+python/NoHardcodedCredentials/test,note,Use of Hardcoded Credentials,CWE-798,_basic_auth_str/test_P3__basic_auth_str_1.py,12
+python/NoHardcodedPasswords/test,note,Use of Hardcoded Passwords,"CWE-798, CWE-259",HTTPDigestAuth/test_P3_HTTPDigestAuth_2.py,15
+python/NoHardcodedPasswords/test,note,Use of Hardcoded Passwords,"CWE-798, CWE-259",HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py,16
+python/NoHardcodedPasswords/test,note,Use of Hardcoded Passwords,"CWE-798, CWE-259",_basic_auth_str/test_P3__basic_auth_str_1.py,13

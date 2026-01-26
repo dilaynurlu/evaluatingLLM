@@ -1,0 +1,30 @@
+ISSUE_SEVERITY,SCORE,PROBLEM_TITLE,FILE_PATH
+Medium,504,Insecure Xml Parser (Python < 3.11),eval/scripts/evaluate_strategy_correctness.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P0/_basic_auth_str/test_P0__basic_auth_str_7.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P3/_basic_auth_str/test_P3__basic_auth_str_1.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_2.py
+Low,452,Use of Hardcoded Credentials,eval/tests/discarded_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_1.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P2/_basic_auth_str/test_P2__basic_auth_str_1.py
+Low,452,Use of Hardcoded Credentials,eval/tests/generated_tests/P0/_basic_auth_str/test_P0__basic_auth_str_1.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_2.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P0/_basic_auth_str/test_P0__basic_auth_str_1.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P2/_basic_auth_str/test_P2__basic_auth_str_1.py
+Low,428,Use of Hardcoded Passwords,eval/tests/discarded_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_1.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P3/_basic_auth_str/test_P3__basic_auth_str_1.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P0/_basic_auth_str/test_P0__basic_auth_str_7.py
+Low,428,Use of Hardcoded Passwords,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py
+Low,418,Use of Password Hash With Insufficient Computational Effort,eval/tests/discarded_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_1.py
+Low,418,Use of Password Hash With Insufficient Computational Effort,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py
+Low,418,Use of Password Hash With Insufficient Computational Effort,eval/tests/discarded_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_1.py
+Low,418,Use of Password Hash With Insufficient Computational Effort,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_6.py
+Low,418,Use of Password Hash With Insufficient Computational Effort,eval/tests/generated_tests/P3/HTTPDigestAuth/test_P3_HTTPDigestAuth_3.py
+Low,402,Use of Hardcoded Credentials,eval/tests/discarded_tests/P3/_basic_auth_str/test_P3__basic_auth_str_7.py
+Low,402,Use of Hardcoded Credentials,eval/tests/discarded_tests/P2/_basic_auth_str/test_P2__basic_auth_str_4.py
+Low,402,Use of Hardcoded Credentials,eval/tests/generated_tests/P2/_basic_auth_str/test_P2__basic_auth_str_3.py
+Low,402,Use of Hardcoded Credentials,eval/tests/generated_tests/P0/_basic_auth_str/test_P0__basic_auth_str_2.py
+Low,402,Use of Hardcoded Credentials,eval/tests/generated_tests/P1/_basic_auth_str/test_P1__basic_auth_str_2.py
+Low,402,Use of Hardcoded Credentials,eval/tests/discarded_tests/P1/_basic_auth_str/test_P1__basic_auth_str_6.py
+Low,402,Use of Hardcoded Credentials,eval/tests/discarded_tests/P3/_basic_auth_str/test_P3__basic_auth_str_2.py
+Low,378,Use of Hardcoded Passwords,eval/tests/generated_tests/P1/_basic_auth_str/test_P1__basic_auth_str_8.py
