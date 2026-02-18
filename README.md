@@ -5,7 +5,7 @@ unit tests against the [`requests`](https://github.com/psf/requests)
 Python library.
 
 This project supports: 
-* **Generating** unit tests using an LLM (Gemini).
+* **Generating** unit tests using an LLM (Gemini) with different prompts.
 * Evaluating **syntactic, execution, and assertion correctness**
 of generated tests.
 * Measuring **line and branch coverage** against the
@@ -16,6 +16,8 @@ local `requests` source code.
 > **Important design choice**:
 > The `requests` library itself is not vendored in this repository.
 > You must provide a local clone and install it in editable mode.
+
+
 
 ---
 <br>
@@ -234,55 +236,6 @@ To enable network access explicitly:
 - Docker is the recommended execution mode for this project.
 
 ------------------------------------------------------------------------
-<br>
-<br>
-
-# Project structure (high-level)
-
-    evaluatingLLM/
-    ├── venv/                                       # Python virtual environment (not committed)
-    ├── reuqests/                                   # Requests Python library to be provided by the user
-    │   └── src/
-    │   └── tests/
-    │   └── (...)
-    ├── docker/
-    │   ├── Dockerfile                              # Evaluation image
-    │   └── GeminiCLI.Dockerfile                    # Interactive CLI image
-    ├── eval/
-    │   └── functions/
-    │       └── functions_to_test.json              #JSON list of all chosen functions to be tested from request library 
-    │   └── prompts/
-    │       ├── API/                                # Prompts for generate.py
-    │       └── CLI/                                # Prompts for Gemini CLI
-    │   └── results/                                # CSV outputs (correctness & coverage)
-    │       └── correctness/  
-    │           └── P0/
-    │           └── P1/
-    │           └── ...
-    │       └── coverage/
-    │       └── security/
-    │   └── scripts/
-    │       └── evaluate_strategy_correctness.py
-    │       └── evaluate_strategy_coverage.py
-    │       └── evaluate_strategy_security.py
-    │       └── generate.py
-    │       ├── run_in_docker.sh
-    │       └── run_gemini_cli.sh
-    │   └── tests/
-    │       └── generated_tests/
-    │           └── P0/
-    │              └── _basic_auth_str/               #Function from functions_to_test.json
-    │                 └── test_P0__basic_auth_str_1.py
-    │                 └── test_P0__basic_auth_str_2.py
-    │                 └── test_P0__basic_auth_str_3.py
-    │              └── _parse_content_type_header/
-    │              └── ... (more functions)
-    │           └── P1/
-    │              └── _basic_auth_str/         
-    │                 └── test_P1__basic_auth_str_1.py
-    │                 └── test_P1__basic_auth_str_2.py
-    │                 └── test_P1__basic_auth_str_3.py
-    └── README.md
 
 <br>
 <br>
@@ -469,8 +422,9 @@ python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --name 
 
 ## Notes
 
+-   under eval/finak_approaches, one can find all tried out scenarios. Exact used prompts and generated tests are stored under the scenario folder. 
 -   `venv/`, `.coverage*`, `htmlcov/`, and result artifacts should be
     ignored via `.gitignore`
 -   The Requests repo should **not** be committed inside this repository
 -   The scripts assume macOS shell paths in examples; adjust activate/unlink commands for other shells/OSes.
--    Keep functions_to_test.json nodeids accurate (path portion must point to existing test files). build_requests_functions_pytest_args() resolves/validates nodeid file paths and will raise if the file does not exist.
+-   Keep functions_to_test.json nodeids accurate (path portion must point to existing test files). build_requests_functions_pytest_args() resolves/validates nodeid file paths and will raise if the file does not exist.
