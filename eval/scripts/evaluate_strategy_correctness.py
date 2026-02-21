@@ -62,6 +62,50 @@ def count_asserts(path: Path) -> int:
         return 0
     
 
+def detect_suspicious_asserts(path: Path) -> dict[str, int]:
+    """
+    Detect tautological assertions in the Python source at `path`.
+
+    Filters for tautologies - assertions that are always true regardless of code behavior:
+      1. Constant assertions: assert True, assert 1, assert "string", etc.
+      2. Self-comparisons: assert x == x, assert foo.bar == foo.bar, etc.
+
+    Returns a dict with counts:
+      - 'constant_asserts': number of assertions with constant truthy values
+      - 'self_comparison_asserts': number of assertions comparing identical expressions
+
+    Returns {"constant_asserts": 0, "self_comparison_asserts": 0} on parse errors.
+    """
+    result = {"constant_asserts": 0, "self_comparison_asserts": 0}
+    
+    try:
+        src = path.read_text(encoding="utf-8")
+        tree = ast.parse(src)
+    except Exception:
+        return result
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assert):
+            # Check for assert True / assert 1 / assert "string"
+            if isinstance(node.test, ast.Constant):
+                # node.test.value is the value of the constant
+                if node.test.value:  # assert True, assert 1, etc.
+                    result["constant_asserts"] += 1
+            
+            # Check for assert x == x
+            elif isinstance(node.test, ast.Compare):
+                left = node.test.left
+                # Check the first comparator for simplicity
+                if len(node.test.comparators) > 0:
+                    right = node.test.comparators[0]
+                    
+                    # Compare if left and right are structurally identical
+                    if ast.dump(left) == ast.dump(right):
+                        result["self_comparison_asserts"] += 1
+
+    return result
+    
+
 
 def run_pytest_junit(path: Path, timeout: int = 30) -> tuple[Path, str]:
     """
@@ -198,7 +242,7 @@ def evaluate_cases(path: Path) -> list[dict]:
         - Run pytest on the single file and produce JUnit XML (run_pytest_junit)
         - Parse JUnit XML (parse_junit)
         - Remove temporary XML file (cleanup)
-        - Decide execution_ok (no execution errors) and assertion_ok (asserts present and no failures/errors)
+        - Decide execution_ok (no execution errors) and assertion_ok (asserts present, no failures/errors, and no tautologies)
     """
     def _sanitize(msg: str, max_len: int = 500) -> str:
         """Sanitize message for CSV: flatten newlines and truncate."""
@@ -237,6 +281,7 @@ def evaluate_cases(path: Path) -> list[dict]:
 
     # Augment each case with per-case metrics aligned with legacy headers
     n_asserts = count_asserts(path)
+    suspicious = detect_suspicious_asserts(path)
     synt_ok = int(syntactic_ok(path))
 
     rows: list[dict] = []
@@ -254,10 +299,11 @@ def evaluate_cases(path: Path) -> list[dict]:
         exec_ok = 0 if status == "error" else 1
         
         # assertion_ok: only checked if execution_ok = 1
-        # Requires: passing test AND file has at least one assert
+        # Requires: passing test AND file has at least one assert AND no tautological assertions
+        has_tautology = (suspicious["constant_asserts"] > 0 or suspicious["self_comparison_asserts"] > 0)
         if status == "error":
             asrt_ok = 0
-        elif status == "pass" and n_asserts > 0:
+        elif status == "pass" and n_asserts > 0 and not has_tautology:
             asrt_ok = 1
         else:
             asrt_ok = 0
@@ -315,7 +361,7 @@ def main():
     Criteria:
         - syntactic_ok: 1 if the file compiles, 0 otherwise.
         - execution_ok: 1 if the test runs without execution errors, 0 otherwise.
-        - assertion_ok: 1 if the test passes and the file has at least one assert, 0 otherwise.
+        - assertion_ok: 1 if the test passes, has at least one assert, and has no tautological assertions, 0 otherwise.
 
     
     --strategy  : required, one of P0,P1,P2,P3 (folder under eval/tests/generated_tests)

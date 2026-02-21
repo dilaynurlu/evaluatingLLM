@@ -1,2 +1,2 @@
-label,tests_run,total_statements,covered_lines,percent_line_coverage,total_branches,covered_branches,percent_branch_coverage,percent_total_coverage,error
-P0,73,921,437,47.44842562432139,358,119,33.24022346368715,43.471462079749806,
+label,tests_run,total_statements,covered_lines,percent_line_coverage,total_branches,covered_branches,percent_branch_coverage,percent_total_coverage,error,gap_miss,gap_extra,gap_ratio
+P0,73,921,437,47.44842562432139,358,119,33.24022346368715,43.471462079749806,,195,12,0.3105095541401274

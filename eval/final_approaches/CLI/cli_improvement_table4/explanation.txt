@@ -10,7 +10,5 @@ Later in the cli we prompt the model explicitly "The human written test suite me
 Then the model does a second round of refinement on the inital batch of tests, modifying them. 
 The coverage results after this refinement are in the second line of each corresponding coverage result csv file. 
 
-Results can be seen in Table 3 and Table 4.
-
-The exact test cases from Table 3 have been modified to the results in Table 4. 
+Results can be seen in Table 4. 
 The folder contains the modified test cases from Table 4. 

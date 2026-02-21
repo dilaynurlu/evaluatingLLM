@@ -18,5 +18,12 @@ Self Refine Loop:
     Keep the “one file = one test function = one scenario” rule.
 
 
-Now proceed to generate the initial test cases according to the rules in GEMINI.md.
+BEFORE writing any test code for F, perform and OUTPUT a short static analysis for F:
+    -List every conditional branch (if/elif/else) that matters for behavior.
+    -List every exception that can be raised or handled (raise, try/except).
+    -List every loop condition / termination behavior.
+    -For each item, describe one concrete input/state that would trigger it. Keep this analysis concise (bullet points).
+
+Now proceed to generate the initial test cases according to the rules in GEMINI.md and perform the Self Refine Loop.
+
 Do not perform the Self Refine Loop more than 3 times. Do not loop forever. 

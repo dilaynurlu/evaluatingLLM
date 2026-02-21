@@ -262,6 +262,53 @@ def aggregate_metrics(json_path: Path) -> dict:
     }
 
 
+def _covered_line_ids(json_path: Path) -> set[str]:
+    """
+    Build a set of covered line identifiers from a coverage.json file.
+
+    Each identifier is "<filepath>:<line>", which allows set comparisons across runs.
+    Returns an empty set on any read/parse errors.
+    """
+    try:
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+
+    files = data.get("files", {})
+    covered: set[str] = set()
+    for filepath, info in files.items():
+        executed = info.get("executed_lines", [])
+        for line in executed:
+            covered.add(f"{filepath}:{line}")
+    return covered
+
+
+def compute_gap_metrics(baseline_json: Path, target_json: Path) -> dict:
+    """
+    Compare two coverage.json files and compute minimal gap metrics.
+
+    baseline_json: coverage produced by the reference test suite (e.g., requests tests)
+    target_json:   coverage produced by generated tests (e.g., P0/P1/...)
+
+    Returns:
+      - gap_miss: lines covered by baseline but not by target
+      - gap_extra: lines covered by target but not by baseline
+      - gap_ratio: gap_miss / baseline_covered (0 if baseline is empty)
+    """
+    baseline = _covered_line_ids(baseline_json)
+    target = _covered_line_ids(target_json)
+
+    gap_miss = len(baseline - target)
+    gap_extra = len(target - baseline)
+    gap_ratio = (gap_miss / len(baseline)) if baseline else 0.0
+
+    return {
+        "gap_miss": gap_miss,
+        "gap_extra": gap_extra,
+        "gap_ratio": gap_ratio,
+    }
+
+
 def build_requests_functions_pytest_args(function_name: str | None) -> list[str]:
     """
     Build pytest args using exact nodeids stored in JSON under test_cases[].test_nodeid.
@@ -356,11 +403,13 @@ def main():
       --label                   (optional)                  : friendly label used in CSV/JSON filenames
       --csv                     (flag)                      : write CSV to eval/results/coverage/<strategy_or_requests>/coverage_results_<label>.csv
       --json-dir                (flag)                      : keep coverage JSON/.coverage under eval/results/coverage/<strategy_or_requests>/json_results/
+      --gap-baseline            (flag)                      : run requests test suite as baseline and compute gap metrics
 
       Usage examples:
       python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --tests _basic_auth_str --csv --json-dir
       python ./eval/scripts/evaluate_strategy_coverage.py --requests --csv
       python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --name get_auth_from_url --csv --json-dir
+      python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --csv --gap-baseline
     """
     parser = argparse.ArgumentParser(
         description="Compute line+branch coverage for a group of tests."
@@ -410,6 +459,11 @@ def main():
         action="store_true",
         help="If set, keep coverage JSON and .coverage files under eval/results/coverage/<strategy_or_requests>/json_results/ (auto-created).",
     )
+    parser.add_argument(
+        "--gap-baseline",
+        action="store_true",
+        help="If set, run requests tests as baseline and compute gap_miss, gap_extra, gap_ratio.",
+    )
 
     args = parser.parse_args()
     pytest_args = None # default. If --requests-functions is used, will be set to specific test nodeids by build_requests_functions_pytest_args()
@@ -417,6 +471,9 @@ def main():
     # Determine test_root
     if args.requests_all and args.requests_functions:
         parser.error("Choose only one: --requests-all OR --requests-functions")
+
+    if args.gap_baseline and (args.requests_all or args.requests_functions):
+        parser.error("--gap-baseline can only be used when evaluating generated tests (not requests tests)")
 
     if args.requests_all:
         # ignore --strategy, run the official requests tests
@@ -476,6 +533,38 @@ def main():
         data_file = tmpdir / ".coverage_data"
         keep_debug_files = False
 
+    baseline_json_file = None
+    baseline_data_file = None
+    baseline_tmp_ctx = None
+    baseline_export_ok = False
+
+    if args.gap_baseline:
+        if args.json_dir:
+            baseline_json_file = debug_dir / "coverage_requests_baseline.json"
+            baseline_data_file = debug_dir / ".coverage_requests_baseline"
+        else:
+            baseline_tmp_ctx = tempfile.TemporaryDirectory()
+            baseline_tmpdir = Path(baseline_tmp_ctx.name)
+            baseline_json_file = baseline_tmpdir / "coverage_requests_baseline.json"
+            baseline_data_file = baseline_tmpdir / ".coverage_requests_baseline"
+
+        baseline_root = (PROJECT_ROOT / "requests" / "tests").resolve()
+        baseline_pytest_args = build_requests_functions_pytest_args(args.name)
+        print(f"\nRunning baseline coverage for requests-functions: {baseline_root}")
+        baseline_rc, baseline_err, _baseline_stats = run_coverage(
+            baseline_root,
+            sut_root=sut_root,
+            data_file=baseline_data_file,
+            pytest_args=baseline_pytest_args,
+        )
+
+        print("\nExporting baseline coverage JSON...")
+        baseline_export_ok, baseline_export_out = export_coverage_json(
+            baseline_data_file, baseline_json_file,
+        )
+        if not baseline_export_ok:
+            print("\nBaseline coverage json failed:", baseline_export_out)
+
 
 
     print(f"\nRunning coverage for group: {label} (tests: {test_root})")
@@ -507,6 +596,16 @@ def main():
         elif returncode != 0:
             error_summary = run_err or f"coverage run returned code {returncode}"
 
+    gap_metrics: dict[str, float | int] = {}
+    if args.gap_baseline and export_ok and baseline_export_ok and baseline_json_file:
+        gap_metrics = compute_gap_metrics(baseline_json_file, json_file)
+        print(
+            "\nGap metrics:",
+            f"miss={gap_metrics.get('gap_miss', 0)}",
+            f"extra={gap_metrics.get('gap_extra', 0)}",
+            f"ratio={gap_metrics.get('gap_ratio', 0.0):.4f}",
+        )
+
     # Append to CSV 
     if args.csv:
         csv_dir.mkdir(parents=True, exist_ok=True)
@@ -524,6 +623,8 @@ def main():
                 "percent_total_coverage",
                 "error",
             ]
+            if args.gap_baseline:
+                fieldnames.extend(["gap_miss", "gap_extra", "gap_ratio"])
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             if write_header:
                 writer.writeheader()
@@ -531,6 +632,10 @@ def main():
             row.update(metrics)
             row["tests_run"] = int(test_stats.get("tests_run", 0))
             row["error"] = " ".join((error_summary or "").split())[:500]
+            if args.gap_baseline:
+                row["gap_miss"] = gap_metrics.get("gap_miss", "")
+                row["gap_extra"] = gap_metrics.get("gap_extra", "")
+                row["gap_ratio"] = gap_metrics.get("gap_ratio", "")
             writer.writerow(row)
         print(f"\nResults appended to {csv_path}")
 
@@ -539,6 +644,8 @@ def main():
         print(f"\n.coverage data kept at: {data_file}")
     else:
         tmp_ctx.cleanup()
+        if baseline_tmp_ctx is not None:
+            baseline_tmp_ctx.cleanup()
 
     print("\nMetrics:", metrics)
 
