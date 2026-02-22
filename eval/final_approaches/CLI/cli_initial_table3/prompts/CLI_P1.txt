@@ -1,0 +1,7 @@
+
+STRATEGY: P1 
+
+
+BEFORE writing any test code for F, think step by step. 
+
+Proceed with generating test cases according to the rules in GEMINI.md 
