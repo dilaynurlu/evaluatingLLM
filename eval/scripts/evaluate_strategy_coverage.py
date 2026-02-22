@@ -283,30 +283,42 @@ def _covered_line_ids(json_path: Path) -> set[str]:
     return covered
 
 
-def compute_gap_metrics(baseline_json: Path, target_json: Path) -> dict:
+def compute_gap_metrics(baseline_json: Path, target_json: Path, return_sets: bool = False) -> dict:
     """
     Compare two coverage.json files and compute minimal gap metrics.
 
     baseline_json: coverage produced by the reference test suite (e.g., requests tests)
     target_json:   coverage produced by generated tests (e.g., P0/P1/...)
+    return_sets:   if True, also return the actual sets of missed/extra lines
 
     Returns:
       - gap_miss: lines covered by baseline but not by target
       - gap_extra: lines covered by target but not by baseline
       - gap_ratio: gap_miss / baseline_covered (0 if baseline is empty)
+      - gap_miss_lines: (optional) set of "filepath:line" strings missed by target
+      - gap_extra_lines: (optional) set of "filepath:line" strings not in baseline
     """
     baseline = _covered_line_ids(baseline_json)
     target = _covered_line_ids(target_json)
 
-    gap_miss = len(baseline - target)
-    gap_extra = len(target - baseline)
+    miss_set = baseline - target
+    extra_set = target - baseline
+
+    gap_miss = len(miss_set)
+    gap_extra = len(extra_set)
     gap_ratio = (gap_miss / len(baseline)) if baseline else 0.0
 
-    return {
+    result = {
         "gap_miss": gap_miss,
         "gap_extra": gap_extra,
         "gap_ratio": gap_ratio,
     }
+
+    if return_sets:
+        result["gap_miss_lines"] = miss_set
+        result["gap_extra_lines"] = extra_set
+
+    return result
 
 
 def build_requests_functions_pytest_args(function_name: str | None) -> list[str]:
@@ -374,6 +386,63 @@ def build_requests_functions_pytest_args(function_name: str | None) -> list[str]
     return sorted(nodeids)
 
 
+def export_gap_details(gap_miss_lines: set[str], gap_extra_lines: set[str], output_path: Path) -> bool:
+    """
+    Export gap analysis details to a JSON file for inspection.
+
+    Organizes missed and extra lines by file for easier review.
+
+    Returns
+    -------
+    bool
+        True on success, False on error
+    """
+    # Organize lines by file
+    missed_by_file: dict[str, list[int]] = {}
+    for line_id in gap_miss_lines:
+        filepath, line = line_id.rsplit(":", 1)
+        if filepath not in missed_by_file:
+            missed_by_file[filepath] = []
+        missed_by_file[filepath].append(int(line))
+
+    extra_by_file: dict[str, list[int]] = {}
+    for line_id in gap_extra_lines:
+        filepath, line = line_id.rsplit(":", 1)
+        if filepath not in extra_by_file:
+            extra_by_file[filepath] = []
+        extra_by_file[filepath].append(int(line))
+
+    # Sort lines for readability
+    for lines in missed_by_file.values():
+        lines.sort()
+    for lines in extra_by_file.values():
+        lines.sort()
+
+    details = {
+        "summary": {
+            "total_missed_lines": len(gap_miss_lines),
+            "total_extra_lines": len(gap_extra_lines),
+            "files_with_missed_lines": len(missed_by_file),
+            "files_with_extra_lines": len(extra_by_file),
+        },
+        "missed_lines": {
+            "description": "Lines covered by baseline (requests tests) but NOT by target (generated tests)",
+            "by_file": missed_by_file,
+        },
+        "extra_lines": {
+            "description": "Lines covered by target (generated tests) but NOT by baseline (requests tests)",
+            "by_file": extra_by_file,
+        },
+    }
+
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(details, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error writing gap details to {output_path}: {e}")
+        return False
 
 
 
@@ -409,7 +478,7 @@ def main():
       python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --tests _basic_auth_str --csv --json-dir
       python ./eval/scripts/evaluate_strategy_coverage.py --requests --csv
       python ./eval/scripts/evaluate_strategy_coverage.py --requests-functions --name get_auth_from_url --csv --json-dir
-      python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --csv --gap-baseline
+      python ./eval/scripts/evaluate_strategy_coverage.py --strategy P0 --csv --gap-baseline  --gap-details
     """
     parser = argparse.ArgumentParser(
         description="Compute line+branch coverage for a group of tests."
@@ -463,6 +532,11 @@ def main():
         "--gap-baseline",
         action="store_true",
         help="If set, run requests tests as baseline and compute gap_miss, gap_extra, gap_ratio.",
+    )
+    parser.add_argument(
+        "--gap-details",
+        action="store_true",
+        help="If set with --gap-baseline, export detailed gap analysis (exact missed/extra lines) to JSON.",
     )
 
     args = parser.parse_args()
@@ -598,13 +672,28 @@ def main():
 
     gap_metrics: dict[str, float | int] = {}
     if args.gap_baseline and export_ok and baseline_export_ok and baseline_json_file:
-        gap_metrics = compute_gap_metrics(baseline_json_file, json_file)
+        # Request line sets if --gap-details is set
+        gap_metrics = compute_gap_metrics(
+            baseline_json_file, json_file, return_sets=args.gap_details
+        )
         print(
             "\nGap metrics:",
             f"miss={gap_metrics.get('gap_miss', 0)}",
             f"extra={gap_metrics.get('gap_extra', 0)}",
             f"ratio={gap_metrics.get('gap_ratio', 0.0):.4f}",
         )
+
+        # Export gap details if requested
+        if args.gap_details:
+            gap_details_path = csv_dir / f"gap_details_{label}.json"
+            if export_gap_details(
+                gap_metrics.get("gap_miss_lines", set()),
+                gap_metrics.get("gap_extra_lines", set()),
+                gap_details_path,
+            ):
+                print(f"Gap details exported to: {gap_details_path}")
+            else:
+                print("Failed to export gap details")
 
     # Append to CSV 
     if args.csv:

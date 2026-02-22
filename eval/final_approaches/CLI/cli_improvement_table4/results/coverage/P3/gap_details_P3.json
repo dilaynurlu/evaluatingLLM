@@ -1,0 +1,122 @@
+{
+  "summary": {
+    "total_missed_lines": 58,
+    "total_extra_lines": 34,
+    "files_with_missed_lines": 3,
+    "files_with_extra_lines": 3
+  },
+  "missed_lines": {
+    "description": "Lines covered by baseline (requests tests) but NOT by target (generated tests)",
+    "by_file": {
+      "/app/requests/src/requests/utils.py": [
+        137,
+        138,
+        140,
+        143,
+        145,
+        146,
+        148,
+        151,
+        152,
+        153,
+        154,
+        158,
+        177,
+        178,
+        179,
+        188,
+        190,
+        192,
+        193,
+        197,
+        201,
+        204,
+        536,
+        538,
+        541,
+        543,
+        544,
+        546,
+        549,
+        551,
+        573,
+        574,
+        576,
+        634,
+        635,
+        636,
+        637,
+        641,
+        644,
+        1075,
+        1076,
+        1079,
+        1080
+      ],
+      "/app/requests/src/requests/auth.py": [
+        196,
+        251,
+        252,
+        290
+      ],
+      "/app/requests/src/requests/sessions.py": [
+        77,
+        191,
+        257,
+        346,
+        452,
+        455,
+        715,
+        716,
+        796,
+        797,
+        831
+      ]
+    }
+  },
+  "extra_lines": {
+    "description": "Lines covered by target (generated tests) but NOT by baseline (requests tests)",
+    "by_file": {
+      "/app/requests/src/requests/sessions.py": [
+        200,
+        201,
+        300,
+        341
+      ],
+      "/app/requests/src/requests/utils.py": [
+        212,
+        224,
+        225,
+        231,
+        232,
+        234,
+        235,
+        236,
+        238,
+        239,
+        702,
+        703,
+        704,
+        705,
+        781,
+        783,
+        793,
+        794,
+        797,
+        798,
+        801,
+        877,
+        994
+      ],
+      "/app/requests/src/requests/auth.py": [
+        139,
+        207,
+        210,
+        239,
+        257,
+        282,
+        283
+      ]
+    }
+  }
+}
